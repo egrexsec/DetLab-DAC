@@ -16,6 +16,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - Sigma rule import support
 - PyPI distribution support
 - Splunk SPL export support
+- Microsoft Sentinel KQL export support
 
 ## Features
 
@@ -27,6 +28,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - Generate ATT&CK Navigator layers
 - Import Sigma rules into DetLab format
 - Export detections into Splunk SPL
+- Export detections into Microsoft Sentinel KQL
 - Release-ready PyPI packaging
 - Integrate with CI for pull request validation
 
@@ -86,6 +88,12 @@ Export Splunk SPL:
 detlab export-splunk detections --output exports/splunk
 ```
 
+Export Microsoft Sentinel KQL:
+
+```bash
+detlab export-kql detections --output exports/kql
+```
+
 ## Example detection structure
 
 ```text
@@ -106,8 +114,9 @@ detections/
 3. Run `detlab report detections`
 4. Run `detlab navigator detections`
 5. Run `detlab export-splunk detections`
-6. Open a pull request
-7. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, Sigma conversions, package builds, and exporter logic
+6. Run `detlab export-kql detections`
+7. Open a pull request
+8. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, Sigma conversions, package builds, and exporter logic
 
 ## Release workflow
 
