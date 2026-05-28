@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from detlab.attck import build_technique_map
+from detlab.kql import export_kql_directory
 from detlab.navigator import generate_navigator_layer
 from detlab.reporting import generate_json_report, generate_markdown_report, write_report
 from detlab.sigma import import_sigma_dir
@@ -35,9 +36,7 @@ def main(
 
 
 @app.command()
-def validate(
-    path: Path = typer.Argument(Path("detections"), help="Path to detections directory.")
-) -> None:
+def validate(path: Path = typer.Argument(Path("detections"))) -> None:
     files, valid, errors = load_detection_dir(path)
 
     table = Table(title="Validation Results")
@@ -59,10 +58,10 @@ def validate(
 
 @app.command("map-attck")
 def map_attck(
-    path: Path = typer.Argument(Path("detections"), help="Path to detections directory."),
+    path: Path = typer.Argument(Path("detections")),
     output: Optional[Path] = typer.Option(None, "--output", "-o"),
 ) -> None:
-    _, valid, errors = load_detection_dir(path)
+    _, valid, _ = load_detection_dir(path)
 
     if not valid:
         raise typer.Exit(code=1)
@@ -93,7 +92,6 @@ def sigma_import(
         table.add_row(str(output))
 
     console.print(table)
-    console.print(f"[green]Imported {len(outputs)} Sigma rules[/green]")
 
 
 @app.command("export-splunk")
@@ -118,7 +116,31 @@ def export_splunk(
         table.add_row(str(output))
 
     console.print(table)
-    console.print(f"[green]Exported {len(outputs)} Splunk searches[/green]")
+
+
+@app.command("export-kql")
+def export_kql(
+    path: Path = typer.Argument(Path("detections")),
+    output_dir: Path = typer.Option(Path("exports/kql"), "--output", "-o"),
+) -> None:
+    _, valid, errors = load_detection_dir(path)
+
+    if not valid:
+        for file, err in errors.items():
+            console.print(f"[red]{file}[/red]: {err}")
+        raise typer.Exit(code=1)
+
+    detections = [load_detection_file(p) for p in path.rglob("*.y*ml")]
+    outputs = export_kql_directory(detections, output_dir)
+
+    table = Table(title="KQL Export Results")
+    table.add_column("Export File")
+
+    for output in outputs:
+        table.add_row(str(output))
+
+    console.print(table)
+    console.print(f"[green]Exported {len(outputs)} KQL queries[/green]")
 
 
 @app.command()
@@ -127,7 +149,7 @@ def navigator(
     output: Path = typer.Option(Path("reports/navigator.json"), "--output", "-o"),
     score_by: str = typer.Option("severity", "--score-by"),
 ) -> None:
-    _, valid, errors = load_detection_dir(path)
+    _, valid, _ = load_detection_dir(path)
 
     if not valid:
         raise typer.Exit(code=1)
@@ -144,7 +166,7 @@ def report(
     format: str = typer.Option("markdown", "--format"),
     output: Path = typer.Option(Path("reports/coverage.md"), "--output", "-o"),
 ) -> None:
-    _, valid, errors = load_detection_dir(path)
+    _, valid, _ = load_detection_dir(path)
 
     if not valid:
         raise typer.Exit(code=1)
