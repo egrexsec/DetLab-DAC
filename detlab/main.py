@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from detlab.attck import build_technique_map
+from detlab.navigator import generate_navigator_layer
 from detlab.reporting import generate_json_report, generate_markdown_report, write_report
 from detlab.validators import load_detection_file, load_detection_dir
 
@@ -92,6 +93,41 @@ def map_attck(
         console.print(f"[green]Wrote ATT&CK mapping to[/green] {output}")
     else:
         console.print(rendered)
+
+
+@app.command()
+def navigator(
+    path: Path = typer.Argument(
+        Path("detections"),
+        exists=False,
+        readable=True,
+        resolve_path=False,
+        help="Path to the detections directory.",
+    ),
+    output: Path = typer.Option(
+        Path("reports/navigator.json"),
+        "--output",
+        "-o",
+        help="Output ATT&CK Navigator layer file.",
+    ),
+    score_by: str = typer.Option(
+        "severity",
+        "--score-by",
+        help="Scoring mode: severity or count.",
+    ),
+) -> None:
+    _, valid, errors = load_detection_dir(path)
+    if not valid:
+        for file, err in errors.items():
+            console.print(f"[red]{file}[/red]: {err}")
+        raise typer.Exit(code=1)
+
+    detections = [load_detection_file(p) for p in path.rglob("*.y*ml")]
+
+    content = generate_navigator_layer(detections, score_by=score_by)
+
+    write_report(str(output), content)
+    console.print(f"[green]Navigator layer written to[/green] {output}")
 
 
 @app.command()

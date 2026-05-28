@@ -12,6 +12,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - Reproducible test references
 - Markdown and JSON coverage reports
 - GitHub Actions-friendly automation
+- ATT&CK Navigator layer generation
 
 ## Features
 
@@ -19,7 +20,8 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - Enforce required metadata
 - Check ATT&CK ID formatting
 - Ensure every detection has at least one test reference
-- Generate simple ATT&CK coverage reports
+- Generate ATT&CK coverage reports
+- Generate ATT&CK Navigator layers
 - Integrate with CI for pull request validation
 
 ## Installation
@@ -52,6 +54,12 @@ Generate ATT&CK mapping JSON:
 detlab map-attck detections --output reports/attack-map.json
 ```
 
+Generate ATT&CK Navigator layer:
+
+```bash
+detlab navigator detections --output reports/navigator.json
+```
+
 ## Example detection structure
 
 ```text
@@ -68,8 +76,9 @@ detections/
 1. Add or update a detection YAML file in `detections/`
 2. Run `detlab validate detections`
 3. Run `detlab report detections`
-4. Open a pull request
-5. Let GitHub Actions verify linting, tests, detection validation, and report generation
+4. Run `detlab navigator detections`
+5. Open a pull request
+6. Let GitHub Actions verify linting, tests, detection validation, report generation, and navigator export
 
 ## Roadmap
 
