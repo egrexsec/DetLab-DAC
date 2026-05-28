@@ -14,6 +14,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - GitHub Actions-friendly automation
 - ATT&CK Navigator layer generation
 - Sigma rule import support
+- Sigma rule export support
 - PyPI distribution support
 - Splunk SPL export support
 - Microsoft Sentinel KQL export support
@@ -28,6 +29,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - Generate ATT&CK coverage reports
 - Generate ATT&CK Navigator layers
 - Import Sigma rules into DetLab format
+- Export detections into Sigma YAML
 - Export detections into Splunk SPL
 - Export detections into Microsoft Sentinel KQL
 - Export detections into Elastic EQL
@@ -84,6 +86,12 @@ Import Sigma rules:
 detlab sigma-import sigma_rules --output detections/imported
 ```
 
+Export Sigma rules:
+
+```bash
+detlab export-sigma detections --output exports/sigma
+```
+
 Export Splunk SPL:
 
 ```bash
@@ -108,11 +116,12 @@ detlab export-eql detections --output exports/eql
 2. Run `detlab validate detections`
 3. Run `detlab report detections`
 4. Run `detlab navigator detections`
-5. Run `detlab export-splunk detections`
-6. Run `detlab export-kql detections`
-7. Run `detlab export-eql detections`
-8. Open a pull request
-9. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, Sigma conversions, package builds, and exporter logic
+5. Run `detlab export-sigma detections`
+6. Run `detlab export-splunk detections`
+7. Run `detlab export-kql detections`
+8. Run `detlab export-eql detections`
+9. Open a pull request
+10. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, Sigma conversions, package builds, and exporter logic
 
 ## Release workflow
 
