@@ -1,10 +1,9 @@
-.venv/
 __pycache__/
+*.pyc
+.venv/
 .pytest_cache/
 .ruff_cache/
-*.pyc
+reports/
 dist/
 build/
 *.egg-info/
-reports/*.json
-reports/*.md
