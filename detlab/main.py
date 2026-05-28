@@ -9,6 +9,7 @@ from rich.table import Table
 from detlab.attck import build_technique_map
 from detlab.navigator import generate_navigator_layer
 from detlab.reporting import generate_json_report, generate_markdown_report, write_report
+from detlab.sigma import import_sigma_dir
 from detlab.validators import load_detection_file, load_detection_dir
 
 VERSION = "0.1.0"
@@ -93,6 +94,40 @@ def map_attck(
         console.print(f"[green]Wrote ATT&CK mapping to[/green] {output}")
     else:
         console.print(rendered)
+
+
+@app.command()
+def sigma_import(
+    input_dir: Path = typer.Argument(
+        Path("sigma_rules"),
+        exists=False,
+        readable=True,
+        resolve_path=False,
+        help="Path to Sigma rules directory.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("detections/imported"),
+        "--output",
+        "-o",
+        help="Output directory for converted detections.",
+    ),
+    start_id: int = typer.Option(
+        1000,
+        "--start-id",
+        help="Starting numeric value for generated DET IDs.",
+    ),
+) -> None:
+    outputs = import_sigma_dir(input_dir, output_dir, start_id)
+
+    table = Table(title="Sigma Import Results")
+    table.add_column("Sigma Rule")
+    table.add_column("Output Detection")
+
+    for output in outputs:
+        table.add_row(output.stem, str(output))
+
+    console.print(table)
+    console.print(f"[green]Imported {len(outputs)} Sigma rules[/green]")
 
 
 @app.command()
