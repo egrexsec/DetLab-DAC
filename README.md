@@ -15,6 +15,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - ATT&CK Navigator layer generation
 - Sigma rule import support
 - PyPI distribution support
+- Splunk SPL export support
 
 ## Features
 
@@ -25,6 +26,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - Generate ATT&CK coverage reports
 - Generate ATT&CK Navigator layers
 - Import Sigma rules into DetLab format
+- Export detections into Splunk SPL
 - Release-ready PyPI packaging
 - Integrate with CI for pull request validation
 
@@ -78,6 +80,12 @@ Import Sigma rules:
 detlab sigma-import sigma_rules --output detections/imported
 ```
 
+Export Splunk SPL:
+
+```bash
+detlab export-splunk detections --output exports/splunk
+```
+
 ## Example detection structure
 
 ```text
@@ -97,8 +105,9 @@ detections/
 2. Run `detlab validate detections`
 3. Run `detlab report detections`
 4. Run `detlab navigator detections`
-5. Open a pull request
-6. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, Sigma conversions, and package builds
+5. Run `detlab export-splunk detections`
+6. Open a pull request
+7. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, Sigma conversions, package builds, and exporter logic
 
 ## Release workflow
 
