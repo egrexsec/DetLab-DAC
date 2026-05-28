@@ -25,8 +25,8 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 ## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/detlab.git
-cd detlab
+git clone https://github.com/egrexsec/DetLab-DAC.git
+cd DetLab-DAC
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
@@ -34,11 +34,42 @@ pip install -e .[dev]
 
 ## Quick start
 
+Validate detections:
+
 ```bash
 detlab validate detections
+```
+
+Generate a markdown report:
+
+```bash
 detlab report detections --format markdown --output reports/coverage.md
+```
+
+Generate ATT&CK mapping JSON:
+
+```bash
 detlab map-attck detections --output reports/attack-map.json
 ```
+
+## Example detection structure
+
+```text
+detections/
+├── windows/
+│   ├── encoded_powershell.yml
+│   └── user_account_creation.yml
+└── cloud/
+    └── aws_root_login.yml
+```
+
+## Example workflow
+
+1. Add or update a detection YAML file in `detections/`
+2. Run `detlab validate detections`
+3. Run `detlab report detections`
+4. Open a pull request
+5. Let GitHub Actions verify linting, tests, detection validation, and report generation
 
 ## Roadmap
 
