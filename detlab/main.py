@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from detlab.attck import build_technique_map
+from detlab.eql import export_eql_directory
 from detlab.kql import export_kql_directory
 from detlab.navigator import generate_navigator_layer
 from detlab.reporting import generate_json_report, generate_markdown_report, write_report
@@ -140,7 +141,31 @@ def export_kql(
         table.add_row(str(output))
 
     console.print(table)
-    console.print(f"[green]Exported {len(outputs)} KQL queries[/green]")
+
+
+@app.command("export-eql")
+def export_eql(
+    path: Path = typer.Argument(Path("detections")),
+    output_dir: Path = typer.Option(Path("exports/eql"), "--output", "-o"),
+) -> None:
+    _, valid, errors = load_detection_dir(path)
+
+    if not valid:
+        for file, err in errors.items():
+            console.print(f"[red]{file}[/red]: {err}")
+        raise typer.Exit(code=1)
+
+    detections = [load_detection_file(p) for p in path.rglob("*.y*ml")]
+    outputs = export_eql_directory(detections, output_dir)
+
+    table = Table(title="EQL Export Results")
+    table.add_column("Export File")
+
+    for output in outputs:
+        table.add_row(str(output))
+
+    console.print(table)
+    console.print(f"[green]Exported {len(outputs)} EQL queries[/green]")
 
 
 @app.command()

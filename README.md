@@ -17,6 +17,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - PyPI distribution support
 - Splunk SPL export support
 - Microsoft Sentinel KQL export support
+- Elastic EQL export support
 
 ## Features
 
@@ -29,6 +30,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - Import Sigma rules into DetLab format
 - Export detections into Splunk SPL
 - Export detections into Microsoft Sentinel KQL
+- Export detections into Elastic EQL
 - Release-ready PyPI packaging
 - Integrate with CI for pull request validation
 
@@ -94,17 +96,10 @@ Export Microsoft Sentinel KQL:
 detlab export-kql detections --output exports/kql
 ```
 
-## Example detection structure
+Export Elastic EQL:
 
-```text
-detections/
-├── windows/
-│   ├── encoded_powershell.yml
-│   └── user_account_creation.yml
-├── imported/
-│   └── sigma_rule.yml
-└── cloud/
-    └── aws_root_login.yml
+```bash
+detlab export-eql detections --output exports/eql
 ```
 
 ## Example workflow
@@ -115,8 +110,9 @@ detections/
 4. Run `detlab navigator detections`
 5. Run `detlab export-splunk detections`
 6. Run `detlab export-kql detections`
-7. Open a pull request
-8. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, Sigma conversions, package builds, and exporter logic
+7. Run `detlab export-eql detections`
+8. Open a pull request
+9. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, Sigma conversions, package builds, and exporter logic
 
 ## Release workflow
 
@@ -136,7 +132,7 @@ GitHub Actions will:
 
 - v0.1: Validation, ATT&CK mapping, markdown/json reports
 - v0.2: Sigma import/export
-- v0.3: Splunk and KQL exporters
+- v0.3: Splunk, KQL, and EQL exporters
 - v0.4: Microsoft 365 / Entra ID support
 - v0.5: AWS CloudTrail support
 
