@@ -13,6 +13,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - Markdown and JSON coverage reports
 - GitHub Actions-friendly automation
 - ATT&CK Navigator layer generation
+- Sigma rule import support
 
 ## Features
 
@@ -22,6 +23,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - Ensure every detection has at least one test reference
 - Generate ATT&CK coverage reports
 - Generate ATT&CK Navigator layers
+- Import Sigma rules into DetLab format
 - Integrate with CI for pull request validation
 
 ## Installation
@@ -60,6 +62,12 @@ Generate ATT&CK Navigator layer:
 detlab navigator detections --output reports/navigator.json
 ```
 
+Import Sigma rules:
+
+```bash
+detlab sigma-import sigma_rules --output detections/imported
+```
+
 ## Example detection structure
 
 ```text
@@ -67,18 +75,20 @@ detections/
 ├── windows/
 │   ├── encoded_powershell.yml
 │   └── user_account_creation.yml
+├── imported/
+│   └── sigma_rule.yml
 └── cloud/
     └── aws_root_login.yml
 ```
 
 ## Example workflow
 
-1. Add or update a detection YAML file in `detections/`
+1. Add or import a detection YAML file into `detections/`
 2. Run `detlab validate detections`
 3. Run `detlab report detections`
 4. Run `detlab navigator detections`
 5. Open a pull request
-6. Let GitHub Actions verify linting, tests, detection validation, report generation, and navigator export
+6. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, and Sigma conversions
 
 ## Roadmap
 
