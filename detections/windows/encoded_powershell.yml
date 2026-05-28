@@ -1,0 +1,34 @@
+id: DET-0001
+title: Encoded PowerShell Execution
+description: Detects PowerShell execution using encoded command arguments.
+
+logsource:
+  product: windows
+  service: process_creation
+
+attack:
+  technique: T1059.001
+  tactic: execution
+
+severity: high
+status: testing
+author: Mell0wx
+
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+
+falsepositives:
+  - Administrative scripts using encoded commands
+
+tests:
+  - name: Atomic Red Team Encoded PowerShell
+    source: atomic-red-team
+    test_id: T1059.001
+
+detection:
+  selection:
+    Image|endswith: '\powershell.exe'
+    CommandLine|contains:
+      - '-enc'
+      - '-encodedcommand'
+  condition: selection
