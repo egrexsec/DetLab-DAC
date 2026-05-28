@@ -8,6 +8,7 @@ from rich.table import Table
 
 from detlab.analytics import generate_json_analytics, generate_markdown_analytics
 from detlab.attck import build_technique_map
+from detlab.dashboard import generate_dashboard
 from detlab.eql import export_eql_directory
 from detlab.kql import export_kql_directory
 from detlab.navigator import generate_navigator_layer
@@ -37,6 +38,23 @@ def main(
     )
 ):
     return
+
+
+@app.command("dashboard")
+def dashboard(
+    path: Path = typer.Argument(Path("detections")),
+    output: Path = typer.Option(Path("reports/dashboard.html"), "--output", "-o"),
+) -> None:
+    _, valid, _ = load_detection_dir(path)
+
+    if not valid:
+        raise typer.Exit(code=1)
+
+    detections = [load_detection_file(p) for p in path.rglob("*.y*ml")]
+    content = generate_dashboard(detections)
+
+    write_report(str(output), content)
+    console.print(f"[green]Dashboard written to[/green] {output}")
 
 
 @app.command("analytics")
