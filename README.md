@@ -14,6 +14,7 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - GitHub Actions-friendly automation
 - ATT&CK Navigator layer generation
 - Sigma rule import support
+- PyPI distribution support
 
 ## Features
 
@@ -24,9 +25,12 @@ Detection content often lives in scattered notes, SIEM dashboards, or undocument
 - Generate ATT&CK coverage reports
 - Generate ATT&CK Navigator layers
 - Import Sigma rules into DetLab format
+- Release-ready PyPI packaging
 - Integrate with CI for pull request validation
 
 ## Installation
+
+### Development install
 
 ```bash
 git clone https://github.com/egrexsec/DetLab-DAC.git
@@ -34,6 +38,12 @@ cd DetLab-DAC
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
+```
+
+### PyPI install
+
+```bash
+pip install detlab
 ```
 
 ## Quick start
@@ -88,7 +98,21 @@ detections/
 3. Run `detlab report detections`
 4. Run `detlab navigator detections`
 5. Open a pull request
-6. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, and Sigma conversions
+6. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, Sigma conversions, and package builds
+
+## Release workflow
+
+Create a release tag:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+GitHub Actions will:
+- Build package distributions
+- Verify distributions with Twine
+- Publish to PyPI
 
 ## Roadmap
 
