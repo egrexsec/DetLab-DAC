@@ -1,0 +1,31 @@
+id: DET-0002
+title: Windows User Account Creation
+description: Detects creation of new local user accounts on Windows systems.
+
+logsource:
+  product: windows
+  service: security
+
+attack:
+  technique: T1136.001
+  tactic: persistence
+
+severity: medium
+status: testing
+author: Mell0wx
+
+references:
+  - https://attack.mitre.org/techniques/T1136/001/
+
+falsepositives:
+  - Legitimate IT administration
+
+tests:
+  - name: Atomic Red Team Create Local User
+    source: atomic-red-team
+    test_id: T1136.001
+
+detection:
+  selection:
+    EventID: 4720
+  condition: selection
