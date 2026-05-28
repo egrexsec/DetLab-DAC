@@ -11,6 +11,7 @@ from detlab.eql import export_eql_directory
 from detlab.kql import export_kql_directory
 from detlab.navigator import generate_navigator_layer
 from detlab.reporting import generate_json_report, generate_markdown_report, write_report
+from detlab.scoring import generate_json_score_report, generate_markdown_score_report
 from detlab.sigma import import_sigma_dir
 from detlab.sigma_export import export_sigma_directory
 from detlab.splunk import export_splunk_directory
@@ -56,6 +57,30 @@ def validate(path: Path = typer.Argument(Path("detections"))) -> None:
 
     if not valid:
         raise typer.Exit(code=1)
+
+
+@app.command("score")
+def score(
+    path: Path = typer.Argument(Path("detections")),
+    format: str = typer.Option("markdown", "--format"),
+    output: Path = typer.Option(Path("reports/maturity.md"), "--output", "-o"),
+) -> None:
+    _, valid, _ = load_detection_dir(path)
+
+    if not valid:
+        raise typer.Exit(code=1)
+
+    detections = [load_detection_file(p) for p in path.rglob("*.y*ml")]
+
+    if format == "markdown":
+        content = generate_markdown_score_report(detections)
+    elif format == "json":
+        content = generate_json_score_report(detections)
+    else:
+        raise typer.Exit(code=1)
+
+    write_report(str(output), content)
+    console.print(f"[green]Score report written to[/green] {output}")
 
 
 @app.command("map-attck")
@@ -118,7 +143,6 @@ def export_sigma(
         table.add_row(str(output))
 
     console.print(table)
-    console.print(f"[green]Exported {len(outputs)} Sigma rules[/green]")
 
 
 @app.command("export-splunk")
@@ -191,7 +215,6 @@ def export_eql(
         table.add_row(str(output))
 
     console.print(table)
-    console.print(f"[green]Exported {len(outputs)} EQL queries[/green]")
 
 
 @app.command()
