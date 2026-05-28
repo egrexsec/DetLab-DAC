@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from detlab.analytics import generate_json_analytics, generate_markdown_analytics
 from detlab.attck import build_technique_map
 from detlab.eql import export_eql_directory
 from detlab.kql import export_kql_directory
@@ -36,6 +37,30 @@ def main(
     )
 ):
     return
+
+
+@app.command("analytics")
+def analytics(
+    path: Path = typer.Argument(Path("detections")),
+    format: str = typer.Option("markdown", "--format"),
+    output: Path = typer.Option(Path("reports/analytics.md"), "--output", "-o"),
+) -> None:
+    _, valid, _ = load_detection_dir(path)
+
+    if not valid:
+        raise typer.Exit(code=1)
+
+    detections = [load_detection_file(p) for p in path.rglob("*.y*ml")]
+
+    if format == "markdown":
+        content = generate_markdown_analytics(detections)
+    elif format == "json":
+        content = generate_json_analytics(detections)
+    else:
+        raise typer.Exit(code=1)
+
+    write_report(str(output), content)
+    console.print(f"[green]Analytics report written to[/green] {output}")
 
 
 @app.command()
