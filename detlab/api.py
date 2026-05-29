@@ -43,3 +43,30 @@ def score(path: str = "detections"):
     ]
 
     return generate_score_report(detections)
+
+
+@app.get("/dashboard")
+def dashboard(path: str = "detections"):
+    detections = [
+        load_detection_file(p)
+        for p in Path(path).rglob("*.y*ml")
+    ]
+
+    analytics_data = generate_analytics(detections)
+    score_data = generate_score_report(detections)
+
+    return {
+        "summary": {
+            "total_detections": analytics_data.get("total_detections", 0),
+            "behavioral_sequences": len(
+                [d for d in detections if hasattr(d, "sequence")]
+            ),
+            "average_score": round(
+                sum(item["score"] for item in score_data) / len(score_data),
+                2,
+            ) if score_data else 0,
+        },
+        "severity": analytics_data.get("severity", {}),
+        "status": analytics_data.get("status", {}),
+        "maturity": analytics_data.get("maturity_distribution", {}),
+    }
