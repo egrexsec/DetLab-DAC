@@ -1,0 +1,12 @@
+name: windows-core
+version: 1.0.0
+maintainer: Mell0wx
+platforms:
+  - splunk
+  - sentinel
+  - elastic
+attack_tactics:
+  - execution
+  - persistence
+
+dependencies: []
