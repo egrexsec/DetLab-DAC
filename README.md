@@ -1,6 +1,6 @@
 # DetLab
 
-DetLab is an advanced detection engineering platform for validating, translating, scoring, packaging, distributing, verifying, and serving behavioral detections across multiple security backends.
+DetLab is an advanced detection engineering platform for validating, translating, scoring, packaging, distributing, verifying, serving, and visualizing behavioral detections across multiple security backends.
 
 ## Platform Capabilities
 
@@ -15,73 +15,80 @@ DetLab is an advanced detection engineering platform for validating, translating
 - Pack trust verification
 - Docker deployment support
 - FastAPI service layer
+- Next.js dashboard foundation
 - GHCR publishing workflows
 - Governance reporting
 - CI/CD integration
 
-## FastAPI Service Layer
+## Web Dashboard
 
-DetLab now supports API-backed execution using FastAPI.
+DetLab now supports a Next.js-based dashboard foundation.
 
-## Install API Dependencies
+## Dashboard Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js |
+| API | FastAPI |
+| Runtime | Docker Compose |
+| Deployment | Container-native |
+
+## Frontend Setup
 
 ```bash
-pip install -r requirements-api.txt
+cd web
+npm install
+npm run dev
 ```
 
-## Start API Server
+Frontend URL:
+
+```text
+http://localhost:3000
+```
+
+## API Server
 
 ```bash
 uvicorn detlab.api:app --host 0.0.0.0 --port 8000
 ```
 
-## Example Endpoints
-
-### Health Check
+API URL:
 
 ```text
-GET /health
+http://localhost:8000
 ```
 
-### Validate Detections
-
-```text
-GET /validate
-```
-
-### Generate Analytics
-
-```text
-GET /analytics
-```
-
-### Generate Detection Scores
-
-```text
-GET /score
-```
-
-## Docker Deployment
-
-### Build Local Image
+## Docker Compose Stack
 
 ```bash
-docker build -t detlab .
+docker compose up --build
 ```
 
-### Run Validation
+Supports:
+- frontend dashboard
+- FastAPI backend
+- containerized local development
+- platform orchestration
 
-```bash
-docker run --rm \
-  -v "$PWD:/workspace" \
-  detlab validate detections
-```
+## Dashboard Features
 
-## GitHub Container Registry
+Current dashboard foundation includes:
 
-```text
-ghcr.io/egrexsec/detlab:latest
-```
+- API health monitoring
+- platform capability overview
+- frontend/API integration foundation
+- governance dashboard groundwork
+
+## Planned Dashboard Features
+
+- ATT&CK heatmaps
+- detection score visualizations
+- maturity distributions
+- pack browsing
+- trust verification status
+- governance analytics
+- behavioral detection timelines
 
 ## Detection Pack Trust Verification
 
@@ -146,6 +153,7 @@ sequence:
 - Pack integrity verification
 - Reproducible container execution
 - API-backed workflows
+- Frontend platform foundations
 
 ## Long-Term Vision
 
@@ -158,6 +166,7 @@ DetLab is evolving toward:
 - portable detection engineering platforms
 - container-native detection engineering
 - API-driven detection operations
+- full detection engineering platform ecosystems
 
 ## License
 
