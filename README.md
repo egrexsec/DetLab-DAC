@@ -1,6 +1,6 @@
 # DetLab
 
-DetLab is an advanced detection engineering platform for validating, translating, scoring, packaging, and distributing behavioral detections across multiple security backends.
+DetLab is an advanced detection engineering platform for validating, translating, scoring, packaging, distributing, and verifying behavioral detections across multiple security backends.
 
 ## Platform Capabilities
 
@@ -12,20 +12,52 @@ DetLab is an advanced detection engineering platform for validating, translating
 - HTML analytics dashboards
 - Detection pack management
 - Pack registry workflows
+- Pack trust verification
 - Governance reporting
 - CI/CD integration
 
-## Detection Pack Registry
+## Detection Pack Trust Verification
 
-DetLab now supports registry-oriented detection pack workflows.
+DetLab now supports integrity-oriented pack verification workflows.
 
-## Pack Lifecycle
+## Verification Workflow
 
 ```text
-Build -> Publish -> Install -> Validate -> Analyze
+Build -> Publish -> Verify -> Install -> Analyze
 ```
 
-## Supported Workflows
+## Supported Verification Workflows
+
+### Verify Detection Pack
+
+```bash
+detlab pack verify registry/windows-core-1.0.0.tar.gz \
+  --metadata registry/windows-core.json
+```
+
+Supports:
+- SHA256 verification
+- Registry metadata validation
+- Pack integrity validation
+- Trust-oriented governance workflows
+
+## Example Trust Metadata
+
+```json
+{
+  "name": "windows-core",
+  "version": "1.0.0",
+  "checksum": "sha256-value",
+  "trust": {
+    "verified": true,
+    "algorithm": "sha256"
+  }
+}
+```
+
+## Detection Pack Registry
+
+DetLab supports registry-oriented detection pack workflows.
 
 ### Build Detection Pack
 
@@ -33,51 +65,16 @@ Build -> Publish -> Install -> Validate -> Analyze
 detlab pack build packs/windows-core
 ```
 
-Creates:
-- distributable archives
-- checksum metadata
-- semantic version metadata
-
 ### Publish Detection Pack
 
 ```bash
 detlab pack publish packs/windows-core
 ```
 
-Creates:
-- registry archives
-- registry metadata manifests
-- reusable distributable bundles
-
 ### Install Detection Pack
 
 ```bash
 detlab pack install windows-core
-```
-
-Supports:
-- local registry cache
-- reusable deployments
-- portable content workflows
-
-## Registry Metadata Example
-
-```json
-{
-  "name": "windows-core",
-  "version": "1.0.0",
-  "checksum": "sha256-value",
-  "archive": "windows-core-1.0.0.tar.gz"
-}
-```
-
-## Detection Pack Structure
-
-```text
-packs/
-  windows-core/
-    pack.yml
-    detections/
 ```
 
 ## Behavioral Detection Example
@@ -113,16 +110,17 @@ sequence:
 - Pack-level reporting
 - Behavioral analytics
 - Executive dashboards
+- Pack integrity verification
 
 ## Long-Term Vision
 
 DetLab is evolving toward:
 
-- community detection ecosystems
-- reusable behavioral detection libraries
 - enterprise detection governance
-- portable detection engineering pipelines
-- threat-informed analytics platforms
+- secure detection distribution ecosystems
+- reusable behavioral detection libraries
+- trusted security content pipelines
+- portable detection engineering platforms
 
 ## License
 
