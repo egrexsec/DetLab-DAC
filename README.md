@@ -13,20 +13,57 @@ DetLab is an advanced detection engineering platform for validating, translating
 - Detection pack management
 - Pack registry workflows
 - Pack trust verification
+- Docker deployment support
+- GHCR publishing workflows
 - Governance reporting
 - CI/CD integration
 
-## Detection Pack Trust Verification
+## Docker Deployment
 
-DetLab now supports integrity-oriented pack verification workflows.
+DetLab supports containerized execution using Docker.
 
-## Verification Workflow
+## Build Local Image
 
-```text
-Build -> Publish -> Verify -> Install -> Analyze
+```bash
+docker build -t detlab .
 ```
 
-## Supported Verification Workflows
+## Run Validation
+
+```bash
+docker run --rm \
+  -v "$PWD:/workspace" \
+  detlab validate detections
+```
+
+## Run Analytics
+
+```bash
+docker run --rm \
+  -v "$PWD:/workspace" \
+  detlab analytics detections
+```
+
+## GitHub Container Registry
+
+Published images:
+
+```text
+ghcr.io/egrexsec/detlab:latest
+```
+
+## Automated Container Publishing
+
+DetLab now supports:
+
+- automated Docker builds
+- GitHub Container Registry publishing
+- tag-based releases
+- reproducible CI/CD execution
+
+## Detection Pack Trust Verification
+
+DetLab supports integrity-oriented pack verification workflows.
 
 ### Verify Detection Pack
 
@@ -41,23 +78,7 @@ Supports:
 - Pack integrity validation
 - Trust-oriented governance workflows
 
-## Example Trust Metadata
-
-```json
-{
-  "name": "windows-core",
-  "version": "1.0.0",
-  "checksum": "sha256-value",
-  "trust": {
-    "verified": true,
-    "algorithm": "sha256"
-  }
-}
-```
-
 ## Detection Pack Registry
-
-DetLab supports registry-oriented detection pack workflows.
 
 ### Build Detection Pack
 
@@ -111,6 +132,7 @@ sequence:
 - Behavioral analytics
 - Executive dashboards
 - Pack integrity verification
+- Reproducible container execution
 
 ## Long-Term Vision
 
@@ -121,6 +143,7 @@ DetLab is evolving toward:
 - reusable behavioral detection libraries
 - trusted security content pipelines
 - portable detection engineering platforms
+- container-native detection engineering
 
 ## License
 
