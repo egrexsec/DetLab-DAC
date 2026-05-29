@@ -1,6 +1,6 @@
 # DetLab
 
-DetLab is an advanced detection engineering platform for validating, translating, scoring, packaging, distributing, and verifying behavioral detections across multiple security backends.
+DetLab is an advanced detection engineering platform for validating, translating, scoring, packaging, distributing, verifying, and serving behavioral detections across multiple security backends.
 
 ## Platform Capabilities
 
@@ -14,21 +14,62 @@ DetLab is an advanced detection engineering platform for validating, translating
 - Pack registry workflows
 - Pack trust verification
 - Docker deployment support
+- FastAPI service layer
 - GHCR publishing workflows
 - Governance reporting
 - CI/CD integration
 
+## FastAPI Service Layer
+
+DetLab now supports API-backed execution using FastAPI.
+
+## Install API Dependencies
+
+```bash
+pip install -r requirements-api.txt
+```
+
+## Start API Server
+
+```bash
+uvicorn detlab.api:app --host 0.0.0.0 --port 8000
+```
+
+## Example Endpoints
+
+### Health Check
+
+```text
+GET /health
+```
+
+### Validate Detections
+
+```text
+GET /validate
+```
+
+### Generate Analytics
+
+```text
+GET /analytics
+```
+
+### Generate Detection Scores
+
+```text
+GET /score
+```
+
 ## Docker Deployment
 
-DetLab supports containerized execution using Docker.
-
-## Build Local Image
+### Build Local Image
 
 ```bash
 docker build -t detlab .
 ```
 
-## Run Validation
+### Run Validation
 
 ```bash
 docker run --rm \
@@ -36,47 +77,18 @@ docker run --rm \
   detlab validate detections
 ```
 
-## Run Analytics
-
-```bash
-docker run --rm \
-  -v "$PWD:/workspace" \
-  detlab analytics detections
-```
-
 ## GitHub Container Registry
-
-Published images:
 
 ```text
 ghcr.io/egrexsec/detlab:latest
 ```
 
-## Automated Container Publishing
-
-DetLab now supports:
-
-- automated Docker builds
-- GitHub Container Registry publishing
-- tag-based releases
-- reproducible CI/CD execution
-
 ## Detection Pack Trust Verification
-
-DetLab supports integrity-oriented pack verification workflows.
-
-### Verify Detection Pack
 
 ```bash
 detlab pack verify registry/windows-core-1.0.0.tar.gz \
   --metadata registry/windows-core.json
 ```
-
-Supports:
-- SHA256 verification
-- Registry metadata validation
-- Pack integrity validation
-- Trust-oriented governance workflows
 
 ## Detection Pack Registry
 
@@ -133,6 +145,7 @@ sequence:
 - Executive dashboards
 - Pack integrity verification
 - Reproducible container execution
+- API-backed workflows
 
 ## Long-Term Vision
 
@@ -144,6 +157,7 @@ DetLab is evolving toward:
 - trusted security content pipelines
 - portable detection engineering platforms
 - container-native detection engineering
+- API-driven detection operations
 
 ## License
 
