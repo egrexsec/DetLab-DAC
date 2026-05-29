@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import {
   BarChart,
   Bar,
@@ -12,22 +13,33 @@ import {
   ResponsiveContainer
 } from 'recharts'
 
-const severityData = [
-  { name: 'low', value: 4 },
-  { name: 'medium', value: 8 },
-  { name: 'high', value: 12 },
-  { name: 'critical', value: 3 }
-]
-
-const maturityData = [
-  { name: 'experimental', value: 3 },
-  { name: 'testing', value: 6 },
-  { name: 'stable', value: 18 }
-]
-
 const COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626']
 
 export default function HomePage() {
+  const [dashboard, setDashboard] = useState(null)
+
+  useEffect(() => {
+    async function fetchDashboard() {
+      try {
+        const response = await fetch('http://localhost:8000/dashboard')
+        const data = await response.json()
+        setDashboard(data)
+      } catch {
+        setDashboard(null)
+      }
+    }
+
+    fetchDashboard()
+  }, [])
+
+  const severityData = dashboard
+    ? Object.entries(dashboard.severity).map(([name, value]) => ({ name, value }))
+    : []
+
+  const maturityData = dashboard
+    ? Object.entries(dashboard.maturity).map(([name, value]) => ({ name, value }))
+    : []
+
   return (
     <main
       style={{
@@ -50,17 +62,23 @@ export default function HomePage() {
       >
         <div style={{ background: '#1e293b', padding: '1rem', borderRadius: '12px' }}>
           <h2>Total Detections</h2>
-          <p style={{ fontSize: '2rem' }}>27</p>
+          <p style={{ fontSize: '2rem' }}>
+            {dashboard?.summary?.total_detections ?? '0'}
+          </p>
         </div>
 
         <div style={{ background: '#1e293b', padding: '1rem', borderRadius: '12px' }}>
           <h2>Behavioral Sequences</h2>
-          <p style={{ fontSize: '2rem' }}>8</p>
+          <p style={{ fontSize: '2rem' }}>
+            {dashboard?.summary?.behavioral_sequences ?? '0'}
+          </p>
         </div>
 
         <div style={{ background: '#1e293b', padding: '1rem', borderRadius: '12px' }}>
-          <h2>Validated Packs</h2>
-          <p style={{ fontSize: '2rem' }}>5</p>
+          <h2>Average Score</h2>
+          <p style={{ fontSize: '2rem' }}>
+            {dashboard?.summary?.average_score ?? '0'}
+          </p>
         </div>
       </div>
 
