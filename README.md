@@ -1,81 +1,86 @@
 # DetLab
 
-DetLab is an open-source detection-as-code platform for validating detections, generating analytics, exporting detections across platforms, and managing reusable behavioral detection content.
+DetLab is an advanced detection engineering platform for validating, translating, scoring, packaging, and distributing behavioral detections across multiple security backends.
 
-## Core Capabilities
+## Platform Capabilities
 
 - Detection validation
-- ATT&CK mapping
-- ATT&CK analytics
+- ATT&CK mapping and analytics
 - Detection maturity scoring
 - Behavioral sequence detections
-- Sigma import/export
-- Splunk SPL export
-- Microsoft Sentinel KQL export
-- Elastic EQL export
-- HTML dashboard generation
+- Multi-platform export pipelines
+- HTML analytics dashboards
 - Detection pack management
+- Pack registry workflows
 - Governance reporting
 - CI/CD integration
 
-## Detection Packs
+## Detection Pack Registry
 
-DetLab now supports reusable detection packs.
+DetLab now supports registry-oriented detection pack workflows.
 
-### Example Structure
+## Pack Lifecycle
+
+```text
+Build -> Publish -> Install -> Validate -> Analyze
+```
+
+## Supported Workflows
+
+### Build Detection Pack
+
+```bash
+detlab pack build packs/windows-core
+```
+
+Creates:
+- distributable archives
+- checksum metadata
+- semantic version metadata
+
+### Publish Detection Pack
+
+```bash
+detlab pack publish packs/windows-core
+```
+
+Creates:
+- registry archives
+- registry metadata manifests
+- reusable distributable bundles
+
+### Install Detection Pack
+
+```bash
+detlab pack install windows-core
+```
+
+Supports:
+- local registry cache
+- reusable deployments
+- portable content workflows
+
+## Registry Metadata Example
+
+```json
+{
+  "name": "windows-core",
+  "version": "1.0.0",
+  "checksum": "sha256-value",
+  "archive": "windows-core-1.0.0.tar.gz"
+}
+```
+
+## Detection Pack Structure
 
 ```text
 packs/
   windows-core/
     pack.yml
     detections/
-
-  insider-threat/
-    pack.yml
-    detections/
 ```
 
-### Example Manifest
-
-```yaml
-name: windows-core
-version: 1.0.0
-maintainer: Mell0wx
-platforms:
-  - splunk
-  - sentinel
-  - elastic
-
-attack_tactics:
-  - execution
-  - persistence
-```
-
-## Pack Features
-
-- Pack manifest validation
-- Version tracking
-- Supported backend tracking
-- ATT&CK coverage summaries
-- Pack maturity scoring
-- Dependency tracking
-- Reusable detection libraries
-
-## Example Pack Workflows
-
-### Validate Pack
-
-```bash
-detlab pack validate packs/windows-core
-```
-
-### Generate Pack Report
-
-```bash
-detlab pack report packs/windows-core --format markdown
-```
-
-## Behavioral Sequence Example
+## Behavioral Detection Example
 
 ```yaml
 sequence:
@@ -86,39 +91,38 @@ sequence:
       selection:
         Image: powershell.exe
 
-    - name: Suspicious Network Connection
+    - name: Network Connection
       selection:
         DestinationPort: 4444
 ```
 
-## Platform Export Matrix
+## Supported Export Targets
 
-| Backend | Supported |
+| Backend | Support |
 |---|---|
 | Sigma | Yes |
 | Splunk SPL | Yes |
 | Microsoft Sentinel KQL | Yes |
 | Elastic EQL | Yes |
 
-## Governance + Analytics
+## Governance Features
 
-DetLab supports:
-
-- ATT&CK tactic coverage analysis
-- Detection quality scoring
+- ATT&CK coverage analytics
 - Weak detection identification
-- Maturity distributions
-- HTML executive dashboards
-- Behavioral analytics foundations
+- Detection maturity scoring
+- Pack-level reporting
+- Behavioral analytics
+- Executive dashboards
 
-## Roadmap
+## Long-Term Vision
 
-- Pack publishing
-- Community registry
-- Interactive dashboards
-- Correlation rule generation
-- Behavioral detection packs
-- Threat-informed analytics
+DetLab is evolving toward:
+
+- community detection ecosystems
+- reusable behavioral detection libraries
+- enterprise detection governance
+- portable detection engineering pipelines
+- threat-informed analytics platforms
 
 ## License
 
