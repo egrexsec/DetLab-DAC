@@ -1,157 +1,124 @@
 # DetLab
 
-DetLab is an open-source detection-as-code CLI for validating detection content, mapping detections to MITRE ATT&CK, and generating coverage reports for security teams.
+DetLab is an open-source detection-as-code platform for validating detections, generating analytics, exporting detections across platforms, and managing reusable behavioral detection content.
 
-It is built for defenders who want to treat detections like code: versioned, tested, reviewable, and automation-friendly.
+## Core Capabilities
 
-## Why DetLab exists
+- Detection validation
+- ATT&CK mapping
+- ATT&CK analytics
+- Detection maturity scoring
+- Behavioral sequence detections
+- Sigma import/export
+- Splunk SPL export
+- Microsoft Sentinel KQL export
+- Elastic EQL export
+- HTML dashboard generation
+- Detection pack management
+- Governance reporting
+- CI/CD integration
 
-Detection content often lives in scattered notes, SIEM dashboards, or undocumented rules. DetLab helps turn that into a structured workflow with:
-- Schema validation for detection files
-- ATT&CK technique mapping
-- Reproducible test references
-- Markdown and JSON coverage reports
-- GitHub Actions-friendly automation
-- ATT&CK Navigator layer generation
-- Sigma rule import support
-- Sigma rule export support
-- PyPI distribution support
-- Splunk SPL export support
-- Microsoft Sentinel KQL export support
-- Elastic EQL export support
+## Detection Packs
 
-## Features
+DetLab now supports reusable detection packs.
 
-- Validate YAML detection files
-- Enforce required metadata
-- Check ATT&CK ID formatting
-- Ensure every detection has at least one test reference
-- Generate ATT&CK coverage reports
-- Generate ATT&CK Navigator layers
-- Import Sigma rules into DetLab format
-- Export detections into Sigma YAML
-- Export detections into Splunk SPL
-- Export detections into Microsoft Sentinel KQL
-- Export detections into Elastic EQL
-- Release-ready PyPI packaging
-- Integrate with CI for pull request validation
+### Example Structure
 
-## Installation
+```text
+packs/
+  windows-core/
+    pack.yml
+    detections/
 
-### Development install
-
-```bash
-git clone https://github.com/egrexsec/DetLab-DAC.git
-cd DetLab-DAC
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .[dev]
+  insider-threat/
+    pack.yml
+    detections/
 ```
 
-### PyPI install
+### Example Manifest
 
-```bash
-pip install detlab
+```yaml
+name: windows-core
+version: 1.0.0
+maintainer: Mell0wx
+platforms:
+  - splunk
+  - sentinel
+  - elastic
+
+attack_tactics:
+  - execution
+  - persistence
 ```
 
-## Quick start
+## Pack Features
 
-Validate detections:
+- Pack manifest validation
+- Version tracking
+- Supported backend tracking
+- ATT&CK coverage summaries
+- Pack maturity scoring
+- Dependency tracking
+- Reusable detection libraries
 
-```bash
-detlab validate detections
-```
+## Example Pack Workflows
 
-Generate a markdown report:
-
-```bash
-detlab report detections --format markdown --output reports/coverage.md
-```
-
-Generate ATT&CK mapping JSON:
+### Validate Pack
 
 ```bash
-detlab map-attck detections --output reports/attack-map.json
+detlab pack validate packs/windows-core
 ```
 
-Generate ATT&CK Navigator layer:
+### Generate Pack Report
 
 ```bash
-detlab navigator detections --output reports/navigator.json
+detlab pack report packs/windows-core --format markdown
 ```
 
-Import Sigma rules:
+## Behavioral Sequence Example
 
-```bash
-detlab sigma-import sigma_rules --output detections/imported
+```yaml
+sequence:
+  within: 5m
+
+  events:
+    - name: PowerShell Execution
+      selection:
+        Image: powershell.exe
+
+    - name: Suspicious Network Connection
+      selection:
+        DestinationPort: 4444
 ```
 
-Export Sigma rules:
+## Platform Export Matrix
 
-```bash
-detlab export-sigma detections --output exports/sigma
-```
+| Backend | Supported |
+|---|---|
+| Sigma | Yes |
+| Splunk SPL | Yes |
+| Microsoft Sentinel KQL | Yes |
+| Elastic EQL | Yes |
 
-Export Splunk SPL:
+## Governance + Analytics
 
-```bash
-detlab export-splunk detections --output exports/splunk
-```
+DetLab supports:
 
-Export Microsoft Sentinel KQL:
-
-```bash
-detlab export-kql detections --output exports/kql
-```
-
-Export Elastic EQL:
-
-```bash
-detlab export-eql detections --output exports/eql
-```
-
-## Example workflow
-
-1. Add or import a detection YAML file into `detections/`
-2. Run `detlab validate detections`
-3. Run `detlab report detections`
-4. Run `detlab navigator detections`
-5. Run `detlab export-sigma detections`
-6. Run `detlab export-splunk detections`
-7. Run `detlab export-kql detections`
-8. Run `detlab export-eql detections`
-9. Open a pull request
-10. Let GitHub Actions verify linting, tests, detection validation, report generation, navigator export, Sigma conversions, package builds, and exporter logic
-
-## Release workflow
-
-Create a release tag:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-GitHub Actions will:
-- Build package distributions
-- Verify distributions with Twine
-- Publish to PyPI
+- ATT&CK tactic coverage analysis
+- Detection quality scoring
+- Weak detection identification
+- Maturity distributions
+- HTML executive dashboards
+- Behavioral analytics foundations
 
 ## Roadmap
 
-- v0.1: Validation, ATT&CK mapping, markdown/json reports
-- v0.2: Sigma import/export
-- v0.3: Splunk, KQL, and EQL exporters
-- v0.4: Microsoft 365 / Entra ID support
-- v0.5: AWS CloudTrail support
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Security
-
-Please read [SECURITY.md](SECURITY.md).
+- Pack publishing
+- Community registry
+- Interactive dashboards
+- Correlation rule generation
+- Behavioral detection packs
+- Threat-informed analytics
 
 ## License
 
