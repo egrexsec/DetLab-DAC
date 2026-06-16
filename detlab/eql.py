@@ -28,7 +28,7 @@ def _render_condition(field: str, value: str) -> str:
 
 
 def build_eql_query(detection: Detection) -> str:
-    selection = detection.detection.get("selection", {})
+    selection = detection.detection.selection
 
     conditions = []
 

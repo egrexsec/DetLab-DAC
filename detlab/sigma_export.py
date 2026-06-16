@@ -41,7 +41,7 @@ def detection_to_sigma(detection: Detection) -> dict:
             "product": detection.logsource.product,
             "service": detection.logsource.service,
         },
-        "detection": detection.detection,
+        "detection": detection.detection.model_dump(),
     }
 
 

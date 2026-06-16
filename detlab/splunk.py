@@ -25,7 +25,7 @@ def _render_value(field: str, value: str) -> str:
 
 
 def build_splunk_search(detection: Detection) -> str:
-    selection = detection.detection.get("selection", {})
+    selection = detection.detection.selection
 
     query_parts = ["search"]
 

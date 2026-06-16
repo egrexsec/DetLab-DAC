@@ -1,8 +1,7 @@
-from pathlib import Path
 import hashlib
 import json
-import shutil
 import tarfile
+from pathlib import Path
 
 from detlab.packs import load_pack_manifest
 

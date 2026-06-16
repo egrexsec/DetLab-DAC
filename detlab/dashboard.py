@@ -9,28 +9,28 @@ HTML_TEMPLATE = """
     <meta charset=\"utf-8\">
     <title>DetLab Dashboard</title>
     <style>
-        body {
+        body {{
             font-family: Arial, sans-serif;
             background: #111827;
             color: #f3f4f6;
             margin: 40px;
-        }
-        .card {
+        }}
+        .card {{
             background: #1f2937;
             padding: 20px;
             margin-bottom: 20px;
             border-radius: 10px;
-        }
-        h1, h2 {
+        }}
+        h1, h2 {{
             color: #60a5fa;
-        }
-        ul {
+        }}
+        ul {{
             list-style-type: none;
             padding: 0;
-        }
-        li {
+        }}
+        li {{
             margin-bottom: 8px;
-        }
+        }}
     </style>
 </head>
 <body>

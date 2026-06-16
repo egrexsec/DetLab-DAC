@@ -35,7 +35,7 @@ def _render_condition(field: str, value: str) -> str:
 
 def build_kql_query(detection: Detection) -> str:
     table = TABLE_MAP.get(detection.logsource.product, "DeviceEvents")
-    selection = detection.detection.get("selection", {})
+    selection = detection.detection.selection
 
     query_lines = [table]
 
