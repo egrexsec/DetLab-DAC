@@ -1,0 +1,27 @@
+id: DET-0001
+title: PowerShell WebClient Download
+description: Detects PowerShell using .NET WebClient to retrieve remote content.
+logsource:
+  product: windows
+  service: powershell
+attack:
+  technique: T1059.001
+  tactic: execution
+severity: high
+status: stable
+author: mell0wx
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+falsepositives:
+  - Administrative PowerShell automation downloading approved internal content.
+tests:
+  - name: Atomic Red Team T1059.001 WebClient Download
+    source: atomic-red-team
+    test_id: 1
+detection:
+  selection:
+    Image: powershell.exe
+    CommandLine|contains:
+      - New-Object Net.WebClient
+      - DownloadString
+  condition: selection

@@ -1,0 +1,13 @@
+name: linux-core
+title: Linux Core
+version: 1.0.0
+maintainer: Mell0wx
+description: Linux baseline detection pack placeholder for auth, process, and persistence events.
+platforms:
+  - splunk
+  - elastic
+focus_areas:
+  - linux
+  - endpoint
+  - baseline coverage
+dependencies: []

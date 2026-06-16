@@ -4,14 +4,18 @@ services:
       context: .
       dockerfile: Dockerfile.api
     environment:
-      DETLAB_ROOT_PATH: /api
+      DETLAB_ROOT_PATH: ${DETLAB_ROOT_PATH:-/api}
+      DETLAB_PACK_ROOT: ${DETLAB_PACK_ROOT:-/workspace/examples/packs}
     volumes:
       - ./detections:/workspace/detections:ro
+      - ./examples/packs:/workspace/examples/packs:ro
 
   web:
     build:
       context: ./web
       dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
     ports:
       - '3000:3000'
     depends_on:

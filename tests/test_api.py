@@ -14,6 +14,20 @@ def test_health_endpoint():
     assert response.json()['status'] == 'ok'
 
 
+
+def test_dashboard_endpoint_exposes_workbench_sections():
+    response = client.get('/dashboard')
+
+    assert response.status_code == 200
+    body = response.json()
+    assert 'summary' in body
+    assert 'coverage' in body
+    assert 'scoring' in body
+    assert 'packs' in body
+    assert body['summary']['total_detections'] >= 1
+
+
+
 def test_docs_use_root_path_when_configured(monkeypatch):
     monkeypatch.setenv('DETLAB_ROOT_PATH', '/api')
     reloaded = importlib.reload(api_module)

@@ -1,0 +1,28 @@
+id: DET-0003
+title: Certutil Download Behavior
+description: Detects certutil being used to download remote content.
+logsource:
+  product: windows
+  service: sysmon
+attack:
+  technique: T1105
+  tactic: command-and-control
+severity: high
+status: experimental
+author: Mell0wx
+references:
+  - https://attack.mitre.org/techniques/T1105/
+falsepositives:
+  - Administrative certificate retrieval or scripted downloads
+tests:
+  - name: Simulated Certutil download
+    source: manual
+    test_id: "certutil-1"
+detection:
+  selection:
+    EventID: 1
+    Image|endswith: '\certutil.exe'
+    CommandLine|contains:
+      - 'urlcache'
+      - 'http'
+  condition: selection

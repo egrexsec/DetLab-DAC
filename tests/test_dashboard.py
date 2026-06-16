@@ -45,6 +45,8 @@ def test_generate_dashboard():
     html = generate_dashboard([TEST_DETECTION])
 
     assert "<html>" in html
-    assert "DetLab Security Analytics Dashboard" in html
-    assert "execution: 1" in html
-    assert "high: 1" in html
+    assert "Detection Engineering Workbench" in html
+    assert "ATT&amp;CK Techniques Covered" not in html  # sanity check escaped text not required
+    assert "ATT&CK Coverage Heatmap" in html
+    assert "Detection Scoring" in html
+    assert "Detection Packs" in html

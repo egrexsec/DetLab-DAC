@@ -1,0 +1,14 @@
+name: powershell
+title: PowerShell
+version: 1.0.0
+maintainer: Mell0wx
+description: Focused pack for high-signal PowerShell execution and download activity.
+platforms:
+  - splunk
+  - sentinel
+  - elastic
+focus_areas:
+  - powershell
+  - execution
+  - script abuse
+dependencies: []

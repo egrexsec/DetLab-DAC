@@ -1,11 +1,13 @@
 from detlab.packs import validate_pack_manifest
 
 
+
 def test_validate_pack_manifest_success():
     manifest = {
         "name": "windows-core",
         "version": "1.0.0",
         "maintainer": "Mell0wx",
+        "description": "Windows coverage pack",
         "platforms": ["splunk", "elastic"],
     }
 
@@ -23,3 +25,4 @@ def test_validate_pack_manifest_missing_fields():
     errors = validate_pack_manifest(manifest)
 
     assert len(errors) > 0
+    assert any("description" in error for error in errors)

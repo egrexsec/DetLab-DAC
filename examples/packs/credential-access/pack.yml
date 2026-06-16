@@ -1,0 +1,12 @@
+name: credential-access
+title: Credential Access
+version: 1.0.0
+maintainer: Mell0wx
+description: Starter pack placeholder for credential theft, dumping, and token abuse coverage.
+platforms:
+  - splunk
+  - sentinel
+focus_areas:
+  - credential access
+  - high-risk gaps
+dependencies: []

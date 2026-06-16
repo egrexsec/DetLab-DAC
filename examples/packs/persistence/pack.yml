@@ -1,0 +1,13 @@
+name: persistence
+title: Persistence
+version: 1.0.0
+maintainer: Mell0wx
+description: Detections covering account creation and foothold-establishment techniques.
+platforms:
+  - splunk
+  - sentinel
+  - elastic
+focus_areas:
+  - persistence
+  - account abuse
+dependencies: []

@@ -1,0 +1,25 @@
+id: DET-0002
+title: Suspicious Rundll32 Execution
+description: Detects rundll32 launching DLLs from suspicious paths or with unusual arguments.
+logsource:
+  product: windows
+  service: sysmon
+attack:
+  technique: T1218.011
+  tactic: defense-evasion
+severity: high
+status: experimental
+author: Mell0wx
+references:
+  - https://attack.mitre.org/techniques/T1218/011/
+falsepositives:
+  - Rare administrative software using rundll32 in custom paths
+tests:
+  - name: Simulated Rundll32 abuse
+    source: manual
+    test_id: "rundll32-1"
+detection:
+  selection:
+    EventID: 1
+    Image|endswith: '\rundll32.exe'
+  condition: selection

@@ -1,12 +1,14 @@
 name: windows-core
+title: Windows Core
 version: 1.0.0
 maintainer: Mell0wx
+description: Baseline Windows endpoint detections for common process, security, and execution telemetry.
 platforms:
   - splunk
   - sentinel
   - elastic
-attack_tactics:
-  - execution
-  - persistence
-
+focus_areas:
+  - windows
+  - endpoint
+  - baseline coverage
 dependencies: []

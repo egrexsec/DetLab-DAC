@@ -1,343 +1,251 @@
-# DetLab-DAC
+# DetLab
 
-> *Technical preview / portfolio project*
+Detection Engineering Workbench
 
-DetLab-DAC is a detection engineering workbench for validating detection-as-code content, scoring rule maturity, mapping coverage to MITRE ATT&CK, exporting detections to multiple backends, and exposing the results through a lightweight API and dashboard.
+Build, validate, score, convert, test, and visualize detections from a single platform.
 
-It is currently best understood as a **functional alpha**: the core CLI, API, Docker workflow, and dashboard foundation are working, but the project still needs an architecture/attack-flow diagram and broader test coverage before it should be presented as a polished general-release platform.
+DetLab is built for detection engineers, threat hunters, SOC analysts, DFIR analysts, and security engineers who want a practical way to improve a detection library without standing up a heavy governance platform.
 
-## What it does
+## Why DetLab
 
-DetLab-DAC currently supports:
-- Detection schema validation
-- Detection maturity scoring
-- ATT&CK tactic / technique coverage reporting
-- Static dashboard generation from the CLI
-- API-backed dashboard data for the web UI
-- Multi-backend export workflows
-- Detection pack build / publish / install / verify commands
-- Docker-based local deployment
+Most detection teams still piece together validation, ATT&CK mapping, backend conversion, scoring, and reporting with ad hoc scripts and spreadsheets.
 
-## Why this project matters
+That creates slow feedback loops:
+- detections get written but not validated consistently
+- ATT&CK coverage is hard to explain quickly
+- backend conversion becomes repetitive manual work
+- weak metadata and weak tests hide inside otherwise useful rules
+- recruiters, hiring managers, and internal stakeholders cannot tell what the detection program actually does
 
-This repo is aimed at a real detection engineering problem:
+DetLab focuses on the core workflow instead:
+- **Is this detection valid?**
+- **How good is this detection?**
+- **What ATT&CK techniques does it cover?**
+- **Can I convert it to another backend?**
+- **What coverage gaps exist?**
+- **How mature is my detection library?**
 
-- normalizing detection content into a consistent schema
-- checking whether detections are operationally mature
-- measuring ATT&CK coverage and weak spots
-- translating the same content into downstream security backends
-- making the state of a detection library visible through a dashboard
+Think of it as **Terraform for detections**.
 
-That makes it relevant to:
-- detection engineering
-- threat hunting support workflows
-- content governance
-- purple-team validation pipelines
-- security automation portfolios
+## Features
 
-## Current release posture
+### 1. Detection Validation
 
-**Safe claim:** DetLab-DAC is a working technical preview for detection validation, scoring, export, and dashboard-backed visibility.
-
-**Avoid claiming:** production-ready platform, enterprise-ready detection pipeline, or fully complete content registry.
-
-Known current boundaries:
-- minimal automated test coverage is present
-- dashboard visuals are functional but still early-stage
-- an architecture / attack-flow diagram is still needed for stronger portfolio presentation
-- sample detections are included, but broader real-world content depth is still limited
-
-## Architecture
-
-```text
-Detection YAML -> Validation / Scoring / ATT&CK Analytics -> API / CLI / Exports / Dashboard
-```
-
-Stack:
-- CLI: Python + Typer
-- API: FastAPI
-- Web: Next.js
-- Charts: Recharts
-- Runtime: Docker Compose
-- Schema / validation: Pydantic
-
-[ARCHITECTURE DIAGRAM REQUIRED — DETECTION FLOW]
-
-## Screenshots
-
-Captured from the verified Docker Compose stack in this repository using the bundled sample detections.
-
-### Dashboard overview
-
-![DetLab dashboard overview](docs/images/dashboard-overview.png)
-
-### ATT&CK coverage heatmap
-
-![DetLab ATT&CK heatmap](docs/images/attack-heatmap.png)
-
-### Verified Splunk export artifact
-
-![DetLab Splunk export](docs/images/splunk-export.png)
-
-[ARCHITECTURE DIAGRAM REQUIRED — DETECTION VALIDATION + EXPORT FLOW]
-
-## Quick start with Docker
-
-This Docker flow assumes you are running from a full checkout of the repository root — not from a standalone copied Compose snippet.
-
-Required files:
-- `docker-compose.yml`
-- `Dockerfile.api`
-- `web/Dockerfile`
-
-Expected layout:
-
-```text
-DetLab-DAC/
-├── docker-compose.yml
-├── Dockerfile.api
-├── requirements-api.txt
-├── pyproject.toml
-├── detlab/
-├── detections/
-└── web/
-    └── Dockerfile
-```
-
-### What runs
-- `web`: public dashboard on port `3000`
-- `api`: internal-only FastAPI service behind the web app proxy
-
-### Docker Compose setup
-
-```yaml
-services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    environment:
-      DETLAB_ROOT_PATH: /api
-    volumes:
-      - ./detections:/workspace/detections:ro
-
-  web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    depends_on:
-      - api
-```
-
-This setup builds the FastAPI service from `Dockerfile.api`, builds the Next.js dashboard from `web/Dockerfile`, exposes the web UI on port `3000`, mounts `./detections` read-only into the API container, and configures FastAPI docs so `/api/docs` works correctly through the web proxy.
-
-### Start
-
-```bash
-docker compose up -d --build
-```
-
-### Verify
-
-```bash
-docker compose ps
-curl http://localhost:3000/api/health
-curl http://localhost:3000/api/dashboard
-curl http://localhost:3000/api/openapi.json
-```
-
-Expected health response:
-
-```json
-{"status":"ok"}
-```
-
-### Access
-
-Open:
-
-```text
-http://localhost:3000
-http://localhost:3000/api/docs
-```
-
-### Logs
-
-```bash
-docker compose logs -f api
-docker compose logs -f web
-```
-
-### Stop
-
-```bash
-docker compose down
-```
-
-### Docker notes
-- The API container uses `Dockerfile.api`.
-- The web container uses a committed `package-lock.json` and `npm ci` for deterministic installs.
-- The API is not published directly to the host in the current Compose setup.
-- Detection content is mounted into the API container from `./detections`.
-- `DETLAB_ROOT_PATH=/api` is used only for the proxied Docker deployment so Swagger/OpenAPI URLs resolve correctly at `/api/docs`.
-
-## Local development
-
-### API
-
-```bash
-pip install -r requirements-api.txt
-uvicorn detlab.api:app --host 0.0.0.0 --port 8000
-```
-
-API endpoints during direct local development:
-
-```text
-http://localhost:8000/health
-http://localhost:8000/docs
-http://localhost:8000/dashboard
-```
-
-### Web
-
-```bash
-cd web
-npm install
-npm run dev
-```
-
-Web UI during local development:
-
-```text
-http://localhost:3000
-```
-
-## Example CLI workflows
-
-### Validate detections
+Validate single files or full libraries for:
+- syntax
+- schema compliance
+- ATT&CK metadata presence
+- required detection metadata
 
 ```bash
 detlab validate detections
 ```
 
-### Generate maturity report
+### 2. Detection Conversion
 
-```bash
-detlab score detections --format markdown --output reports/maturity.md
-```
+Convert detections to backend-specific formats from one CLI.
 
-### Generate ATT&CK analytics
-
-```bash
-detlab analytics detections --format markdown --output reports/analytics.md
-```
-
-### Generate static dashboard
-
-```bash
-detlab dashboard detections --output reports/dashboard.html
-```
-
-### Export to supported backends
-
-```bash
-detlab export-sigma detections --output exports/sigma
-detlab export-splunk detections --output exports/splunk
-detlab export-kql detections --output exports/kql
-detlab export-eql detections --output exports/eql
-```
-
-### Import Sigma rules into the DetLab schema
-
-```bash
-detlab sigma-import sigma_rules --output detections/imported --start-id 1000
-```
-
-## Detection model
-
-Detections are validated against a structured schema that currently includes:
-- `id`
-- `title`
-- `description`
-- `logsource`
-- `attack`
-- `severity`
-- `status`
-- `author`
-- `references`
-- `falsepositives`
-- `tests`
-- `detection`
-
-### Example detection
-
-```yaml
-id: DET-0001
-title: PowerShell WebClient Download
-description: Detects PowerShell using .NET WebClient to retrieve remote content.
-logsource:
-  product: windows
-  service: powershell
-attack:
-  technique: T1059.001
-  tactic: execution
-severity: high
-status: stable
-author: mell0wx
-references:
-  - https://attack.mitre.org/techniques/T1059/001/
-falsepositives:
-  - Administrative PowerShell automation downloading approved internal content.
-tests:
-  - name: Atomic Red Team T1059.001 WebClient Download
-    source: atomic-red-team
-    test_id: 1
-detection:
-  selection:
-    Image: powershell.exe
-    CommandLine|contains:
-      - New-Object Net.WebClient
-      - DownloadString
-  condition: selection
-```
-
-## Supported export targets
-
+Supported outputs:
 - Sigma
 - Splunk SPL
-- Microsoft Sentinel KQL
+- Sentinel KQL
 - Elastic EQL
 
-## API endpoints
+```bash
+detlab convert detections/windows/encoded_powershell.yml --target splunk
+```
 
-Primary endpoints currently exposed by the FastAPI service:
-- `GET /health`
-- `GET /validate`
-- `GET /analytics`
-- `GET /score`
-- `GET /dashboard`
+### 3. Detection Scoring
 
-In the Docker setup, these are accessed through the web app proxy under `/api/*`.
+Score detections using practical engineering-oriented dimensions:
+- Coverage Score
+- Specificity Score
+- Metadata Score
+- Maintainability Score
+- False Positive Risk
+- Overall Score
 
-## Current repo strengths
+```bash
+detlab score detections --format markdown --output reports/scores.md
+```
 
-- Real Python CLI implementation, not just a concept README
-- Working FastAPI layer
-- Working Next.js dashboard shell
-- Dockerized local stack
-- Detection validation and scoring logic in code
-- Cross-backend export direction aligned with detection engineering work
+### 4. ATT&CK Coverage Analysis
 
-## Highest-value next improvements
+Generate ATT&CK-oriented reports for:
+- coverage by tactic
+- coverage by technique
+- coverage by platform
+- missing coverage
+- weak coverage
+- high-risk gaps
 
-1. Add real screenshots from the dashboard and exports
-2. Add an architecture / attack-flow diagram
-3. Expand automated tests beyond health checks
-4. Add more realistic detection content and validation cases
-5. Show a full threat-hunting / detection-engineering workflow in the README
+```bash
+detlab attack report detections --format markdown --output reports/attack-coverage.md
+```
 
-## License
+### 5. Detection Packs
 
-MIT
+Ship reusable sample packs for focused demo and adoption workflows.
+
+Included examples:
+- Windows Core
+- PowerShell
+- Credential Access
+- Persistence
+- CloudTrail
+- Linux Core
+
+```bash
+detlab pack-report examples/packs/windows-core
+```
+
+## Screenshots
+
+Captured from the verified Docker Compose stack in this repository.
+
+### 1. Dashboard Overview
+
+![Dashboard Overview](docs/images/dashboard-overview.png)
+
+### 2. ATT&CK Heatmap
+
+![ATT&CK Heatmap](docs/images/attack-heatmap.png)
+
+### 3. Detection Score View
+
+![Detection Score View](docs/images/detection-score-view.png)
+
+### 4. Detection Pack View
+
+![Detection Pack View](docs/images/detection-pack-view.png)
+
+## Architecture
+
+DetLab is designed as a detection engineering workbench with a fast local demo path and a workflow that maps cleanly to real SOC engineering tasks.
+
+![DetLab Architecture Diagram](docs/images/architecture-diagram.png)
+
+Architecture highlights:
+- **Typer CLI** for validation, scoring, ATT&CK reporting, and backend export workflows
+- **FastAPI** for health, validation, scoring, analytics, packs, and dashboard data APIs
+- **Next.js dashboard** for overview, ATT&CK coverage, detection quality, packs, and reporting views
+- **Scoring engine** for coverage, specificity, metadata, maintainability, and false-positive risk calculations
+- **ATT&CK analytics** for tactic/technique coverage, weak coverage, and high-risk gaps
+- **Export engine** for Splunk SPL, Sigma, Sentinel KQL, and Elastic EQL outputs
+- **Detection packs** for reusable demo and engineering-focused content bundles
+- **Docker Compose** for one-command local deployment
+
+For the editable source diagram, see `docs/architecture-diagram.html`.
+
+## Quick Start
+
+### Requirements
+- Docker Compose
+- GNU Make
+
+### One-command startup
+
+```bash
+git clone https://github.com/egrexsec/DetLab-DAC.git
+cd DetLab-DAC
+cp .env.example .env
+make up
+```
+
+Open:
+- `http://localhost:3000`
+
+### What starts
+- `web` → Next.js workbench UI on port `3000`
+- `api` → FastAPI backend behind the `/api` proxy path
+
+### Environment defaults
+
+`.env.example` includes:
+- `DETLAB_ROOT_PATH=/api`
+- `NEXT_PUBLIC_API_BASE_URL=/api`
+- `DETLAB_PACK_ROOT=/workspace/examples/packs`
+
+The `/api` root path keeps FastAPI docs and OpenAPI working correctly when the UI proxies requests through the web container.
+
+### Useful commands
+
+```bash
+make ps
+make logs
+make down
+make test
+```
+
+## Example Workflow
+
+1. Create or import a detection
+2. Validate the detection
+3. Score the detection quality
+4. Generate an ATT&CK coverage report
+5. Convert the detection for a target backend
+
+```bash
+detlab validate detections/windows/encoded_powershell.yml
+detlab score detections --format markdown --output reports/scores.md
+detlab attack report detections --format markdown --output reports/attack-coverage.md
+detlab convert detections/windows/encoded_powershell.yml --target splunk --output exports/encoded_powershell.spl
+```
+
+## Sample Detection Packs
+
+### Windows Core
+Baseline Windows endpoint detections for execution, process creation, and admin tooling.
+
+### PowerShell
+Focused PowerShell pack for encoded commands, download activity, and script abuse.
+
+### Credential Access
+Starter pack metadata for credential theft and token abuse coverage expansion.
+
+### Persistence
+Pack centered on foothold-establishment and account abuse use cases.
+
+### CloudTrail
+Cloud detection starter pack for AWS control-plane monitoring and audit workflows.
+
+### Linux Core
+Baseline Linux starter pack for auth, process, and persistence telemetry.
+
+## Roadmap
+
+### Next 30 days
+- improve pack-level analytics and pack comparison views
+- add richer detection test result surfacing in the UI
+- add single-detection drill-down pages for validation and score reasoning
+- add export previews for Sigma, SPL, KQL, and EQL in the dashboard
+- tighten scoring heuristics with better maintainability and FP-risk signals
+- expand sample pack content for Linux, CloudTrail, and Credential Access
+
+## Future Vision
+
+The following ideas remain valid, but they are intentionally **not** the V1 story.
+
+Future vision areas:
+- detection marketplace
+- registry ecosystem
+- enterprise governance
+- detection distribution networks
+- trust ecosystems
+- multi-tenant architecture
+- enterprise workflow management
+- detection supply chains
+
+These belong after the workbench is easy to understand, easy to deploy, easy to demo, and easy to adopt.
+
+## Recruiter Demo Test
+
+A good DetLab demo should let someone understand the value in under 30 seconds:
+- detections are validated
+- detections are scored
+- ATT&CK coverage is visible
+- backend conversion exists
+- packs make the project easy to demo and extend
+
+A detection engineer should understand the core workflow in under 2 minutes.
+A new user should be able to deploy the stack in under 5 minutes with Docker Compose and `make up`.

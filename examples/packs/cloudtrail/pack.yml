@@ -1,0 +1,13 @@
+name: cloudtrail
+title: CloudTrail
+version: 1.0.0
+maintainer: Mell0wx
+description: Cloud detection pack placeholder for AWS activity and control plane monitoring.
+platforms:
+  - splunk
+  - sentinel
+focus_areas:
+  - aws
+  - cloudtrail
+  - cloud detections
+dependencies: []

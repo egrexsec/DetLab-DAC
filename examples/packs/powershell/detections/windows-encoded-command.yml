@@ -1,0 +1,27 @@
+id: DET-0002
+title: PowerShell EncodedCommand Execution
+description: Detects PowerShell launched with an encoded command payload.
+logsource:
+  product: windows
+  service: powershell
+attack:
+  technique: T1059.001
+  tactic: execution
+severity: critical
+status: testing
+author: mell0wx
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+falsepositives:
+  - Approved red team or administrative automation using encoded PowerShell.
+tests:
+  - name: Atomic Red Team T1059.001 EncodedCommand
+    source: atomic-red-team
+    test_id: 2
+detection:
+  selection:
+    Image: powershell.exe
+    CommandLine|contains:
+      - -enc
+      - -encodedcommand
+  condition: selection
