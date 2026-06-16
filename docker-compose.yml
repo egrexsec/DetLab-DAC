@@ -1,14 +1,15 @@
-version: '3.9'
-
 services:
   api:
-    build: .
-    command: uvicorn detlab.api:app --host 0.0.0.0 --port 8000
-    ports:
-      - '8000:8000'
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    volumes:
+      - ./detections:/workspace/detections:ro
 
   web:
-    build: ./web
+    build:
+      context: ./web
+      dockerfile: Dockerfile
     ports:
       - '3000:3000'
     depends_on:

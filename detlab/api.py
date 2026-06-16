@@ -1,12 +1,24 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from detlab.analytics import generate_analytics
 from detlab.scoring import generate_score_report
 from detlab.validators import load_detection_dir, load_detection_file
 
 app = FastAPI(title="DetLab API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
@@ -66,6 +78,7 @@ def dashboard(path: str = "detections"):
                 2,
             ) if score_data else 0,
         },
+        "tactics": analytics_data.get("tactics", {}),
         "severity": analytics_data.get("severity", {}),
         "status": analytics_data.get("status", {}),
         "maturity": analytics_data.get("maturity_distribution", {}),

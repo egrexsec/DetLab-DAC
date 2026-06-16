@@ -8,3 +8,5 @@ build/
 *.egg-info/
 reports/*.json
 reports/*.md
+web/node_modules/
+web/.next/
