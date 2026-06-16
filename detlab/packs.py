@@ -16,6 +16,13 @@ REQUIRED_PACK_FIELDS = [
 ]
 
 
+def determine_pack_health(validation: dict) -> str:
+    if not validation["manifest_valid"] or not validation["detections_valid"]:
+        return "needs-attention"
+    if validation["detection_count"] == 0:
+        return "seed"
+    return "healthy"
+
 
 def load_pack_manifest(pack_dir: Path) -> dict:
     manifest_path = pack_dir / "pack.yml"
@@ -81,7 +88,7 @@ def generate_pack_report(pack_dir: Path) -> dict:
         "validation": validation,
         "analytics": analytics,
         "average_score": average_score,
-        "pack_health": "healthy" if validation["manifest_valid"] and validation["detections_valid"] else "needs-attention",
+        "pack_health": determine_pack_health(validation),
     }
 
 

@@ -24,7 +24,23 @@ def test_dashboard_endpoint_exposes_workbench_sections():
     assert 'coverage' in body
     assert 'scoring' in body
     assert 'packs' in body
+    assert 'review_queue' in body
     assert body['summary']['total_detections'] >= 1
+
+
+
+def test_dashboard_endpoint_exposes_actionable_review_queue():
+    response = client.get('/dashboard')
+
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body['review_queue']['high_risk_gaps']
+    first_gap = body['review_queue']['high_risk_gaps'][0]
+    assert first_gap['tactic']
+    assert first_gap['priority'] == 'high'
+    assert first_gap['recommended_pack']
+    assert first_gap['recommended_action']
 
 
 

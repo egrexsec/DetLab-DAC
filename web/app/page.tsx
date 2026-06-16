@@ -42,6 +42,7 @@ type ScoreRow = {
   overall_score: number
   severity: string
   status: string
+  recommendations?: string[]
 }
 
 type PackRow = {
@@ -71,11 +72,33 @@ type Reports = {
   weak_detections: Array<{ id: string; title: string; score: number }>
 }
 
+type ReviewGap = {
+  tactic: string
+  priority: string
+  recommended_pack: string
+  recommended_action: string
+}
+
+type ReviewWeakDetection = {
+  id: string
+  title: string
+  overall_score: number
+  severity: string
+  status: string
+  recommendations: string[]
+}
+
+type ReviewQueue = {
+  high_risk_gaps: ReviewGap[]
+  weak_detections: ReviewWeakDetection[]
+}
+
 type DashboardData = {
   summary: Summary
   coverage: Coverage
   scoring: ScoreRow[]
   packs: PackRow[]
+  review_queue: ReviewQueue
   reports: Reports
 }
 
@@ -113,20 +136,29 @@ function riskBadgeColor(level: string) {
 }
 
 function healthBadgeColor(level: string) {
-  return level === 'healthy' ? '#14532d' : '#7f1d1d'
+  if (level === 'healthy') return '#14532d'
+  if (level === 'seed') return '#78350f'
+  return '#7f1d1d'
 }
 
 export default function HomePage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
 
   useEffect(() => {
     async function fetchDashboard() {
       try {
+        setLoadState('loading')
         const response = await fetch(`${API_BASE_URL}/dashboard`)
+        if (!response.ok) {
+          throw new Error(`dashboard request failed: ${response.status}`)
+        }
         const data: DashboardData = await response.json()
         setDashboard(data)
+        setLoadState('ready')
       } catch {
         setDashboard(null)
+        setLoadState('error')
       }
     }
 
@@ -147,6 +179,57 @@ export default function HomePage() {
     if (!dashboard) return []
     return Object.entries(dashboard.reports.score_distribution).map(([name, value]) => ({ name, value }))
   }, [dashboard])
+
+  if (loadState === 'loading') {
+    return (
+      <main
+        style={{
+          minHeight: '100vh',
+          background: '#020617',
+          color: '#e2e8f0',
+          fontFamily: 'Inter, Arial, sans-serif',
+          padding: '32px',
+        }}
+      >
+        <section style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>
+            Detection Engineering Workbench
+          </div>
+          <h1 style={{ fontSize: '3rem', margin: '12px 0 8px' }}>DetLab</h1>
+          <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px', marginTop: '24px', color: '#94a3b8' }}>
+            Loading dashboard data...
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  if (loadState === 'error') {
+    return (
+      <main
+        style={{
+          minHeight: '100vh',
+          background: '#020617',
+          color: '#e2e8f0',
+          fontFamily: 'Inter, Arial, sans-serif',
+          padding: '32px',
+        }}
+      >
+        <section style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>
+            Detection Engineering Workbench
+          </div>
+          <h1 style={{ fontSize: '3rem', margin: '12px 0 8px' }}>DetLab</h1>
+          <div style={{ background: '#0f172a', border: '1px solid #7f1d1d', borderRadius: '16px', padding: '20px', marginTop: '24px' }}>
+            <div style={{ fontWeight: 700 }}>Dashboard unavailable</div>
+            <p style={{ color: '#94a3b8', marginBottom: 0 }}>
+              The UI could not load data from the API. Check the FastAPI service and retry.
+            </p>
+          </div>
+        </section>
+      </main>
+    )
+  }
 
   return (
     <main
@@ -181,10 +264,10 @@ export default function HomePage() {
             marginBottom: '28px',
           }}
         >
-          {['Dashboard', 'Detections', 'Coverage', 'Scoring', 'Packs', 'Reports'].map((item) => (
+          {['Dashboard', 'Detections', 'Coverage', 'Scoring', 'Packs', 'Review Queue', 'Reports'].map((item) => (
             <a
               key={item}
-              href={`#${item.toLowerCase()}`}
+              href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
               style={{
                 background: '#111827',
                 color: '#cbd5e1',
@@ -355,7 +438,9 @@ export default function HomePage() {
               <div key={pack.name} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                   <h3 style={{ margin: 0 }}>{pack.title}</h3>
-                  <span style={{ background: healthBadgeColor(pack.pack_health), padding: '4px 10px', borderRadius: '999px', fontSize: '0.8rem' }}>{pack.pack_health}</span>
+                  <span style={{ background: healthBadgeColor(pack.pack_health), padding: '4px 10px', borderRadius: '999px', fontSize: '0.8rem' }}>
+                    {pack.pack_health === 'seed' ? 'seed pack' : pack.pack_health}
+                  </span>
                 </div>
                 <p style={{ color: '#94a3b8' }}>{pack.description}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px' }}>
@@ -373,7 +458,13 @@ export default function HomePage() {
                   </div>
                   <div>
                     <div style={{ color: '#94a3b8', fontSize: '0.86rem' }}>Validation Status</div>
-                    <div>{pack.validation.manifest_valid && pack.validation.detections_valid ? 'Pass' : 'Needs review'}</div>
+                    <div>
+                      {pack.pack_health === 'seed'
+                        ? 'Scaffolded'
+                        : pack.validation.manifest_valid && pack.validation.detections_valid
+                          ? 'Pass'
+                          : 'Needs review'}
+                    </div>
                   </div>
                 </div>
                 <div style={{ marginTop: '14px' }}>
@@ -388,6 +479,61 @@ export default function HomePage() {
                 </div>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section id="review-queue" style={{ marginTop: '36px' }}>
+          <h2 style={{ fontSize: '2rem' }}>Review Queue</h2>
+          <p style={{ color: '#94a3b8', maxWidth: '860px' }}>
+            Prioritized actions for improving detection coverage and raising content quality.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '16px', marginTop: '16px' }}>
+            <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px' }}>
+              <h3 style={{ marginTop: 0 }}>High-Risk ATT&CK Gaps</h3>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {(dashboard?.review_queue.high_risk_gaps ?? []).map((gap) => (
+                  <div key={gap.tactic} style={{ border: '1px solid #334155', borderRadius: '14px', padding: '16px', background: '#111827' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ fontWeight: 700, textTransform: 'capitalize' }}>{gap.tactic}</div>
+                      <span style={{ background: '#7f1d1d', padding: '4px 10px', borderRadius: '999px', fontSize: '0.8rem' }}>{gap.priority}</span>
+                    </div>
+                    <div style={{ color: '#94a3b8', marginTop: '10px' }}>{gap.recommended_action}</div>
+                    <div style={{ marginTop: '10px', color: '#cbd5e1' }}>
+                      Recommended pack: <span style={{ color: '#93c5fd' }}>{gap.recommended_pack}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px' }}>
+              <h3 style={{ marginTop: 0 }}>Weak Detection Review</h3>
+              {(dashboard?.review_queue.weak_detections ?? []).length > 0 ? (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {(dashboard?.review_queue.weak_detections ?? []).map((item) => (
+                    <div key={item.id + item.title} style={{ border: '1px solid #334155', borderRadius: '14px', padding: '16px', background: '#111827' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>{item.title}</div>
+                          <div style={{ color: '#94a3b8', fontSize: '0.86rem' }}>{item.id} • {item.status} • {item.severity}</div>
+                        </div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{item.overall_score}</div>
+                      </div>
+                      <ul style={{ marginBottom: 0, marginTop: '12px' }}>
+                        {item.recommendations.map((recommendation) => (
+                          <li key={recommendation}>{recommendation}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: '#94a3b8' }}>
+                  No detections are currently below the 70/100 review threshold. The next highest-value work is closing the ATT&CK gaps listed here.
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
@@ -411,11 +557,17 @@ export default function HomePage() {
             <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px' }}>
               <h3 style={{ marginTop: 0 }}>Validation & Weak Detections</h3>
               <p style={{ color: '#94a3b8' }}>Library health: {dashboard?.reports.valid ? 'passing validation' : 'validation issues detected'}.</p>
-              <ul>
-                {(dashboard?.reports.weak_detections ?? []).map((item) => (
-                  <li key={item.id + item.title}>{item.title} ({item.score}/100)</li>
-                ))}
-              </ul>
+              {(dashboard?.reports.weak_detections ?? []).length > 0 ? (
+                <ul>
+                  {(dashboard?.reports.weak_detections ?? []).map((item) => (
+                    <li key={item.id + item.title}>{item.title} ({item.score}/100)</li>
+                  ))}
+                </ul>
+              ) : (
+                <div style={{ color: '#94a3b8' }}>
+                  No weak detections are currently scoring below the 70/100 review threshold.
+                </div>
+              )}
             </div>
           </div>
         </section>

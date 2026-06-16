@@ -2,7 +2,7 @@ import json
 from collections import Counter
 
 from detlab.models import Detection
-from detlab.scoring import generate_score_report
+from detlab.scoring import score_detection
 
 ATTACK_TACTICS = [
     "initial-access",
@@ -42,10 +42,10 @@ def generate_analytics(detections: list[Detection]) -> dict:
         "0-49": 0,
     }
 
-    score_report = generate_score_report(detections)
     weak_detections = []
 
-    for detection, score in zip(detections, score_report):
+    for detection in detections:
+        score = score_detection(detection)
         tactic_counts[detection.attack.tactic] += 1
         technique_counts[detection.attack.technique] += 1
         platform_counts[detection.logsource.product] += 1
