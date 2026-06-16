@@ -74,6 +74,27 @@ The README is cleaned up, but visuals are still required for a proper flagship p
 
 ## Quick start with Docker
 
+This Docker flow assumes you are running from a full checkout of the repository root — not from a standalone copied Compose snippet.
+
+Required files:
+- `docker-compose.yml`
+- `Dockerfile.api`
+- `web/Dockerfile`
+
+Expected layout:
+
+```text
+DetLab-DAC/
+├── docker-compose.yml
+├── Dockerfile.api
+├── requirements-api.txt
+├── pyproject.toml
+├── detlab/
+├── detections/
+└── web/
+    └── Dockerfile
+```
+
 ### What runs
 - `web`: public dashboard on port `3000`
 - `api`: internal-only FastAPI service behind the web app proxy
