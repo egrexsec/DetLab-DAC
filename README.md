@@ -4,7 +4,7 @@
 
 DetLab-DAC is a detection engineering workbench for validating detection-as-code content, scoring rule maturity, mapping coverage to MITRE ATT&CK, exporting detections to multiple backends, and exposing the results through a lightweight API and dashboard.
 
-It is currently best understood as a **functional alpha**: the core CLI, API, Docker workflow, and dashboard foundation are working, but the project still needs stronger screenshots, attack-flow diagrams, and broader test coverage before it should be presented as a polished general-release platform.
+It is currently best understood as a **functional alpha**: the core CLI, API, Docker workflow, and dashboard foundation are working, but the project still needs an architecture/attack-flow diagram and broader test coverage before it should be presented as a polished general-release platform.
 
 ## What it does
 
@@ -44,7 +44,7 @@ That makes it relevant to:
 Known current boundaries:
 - minimal automated test coverage is present
 - dashboard visuals are functional but still early-stage
-- screenshots and architecture diagrams are still needed for stronger portfolio presentation
+- an architecture / attack-flow diagram is still needed for stronger portfolio presentation
 - sample detections are included, but broader real-world content depth is still limited
 
 ## Architecture
@@ -63,14 +63,23 @@ Stack:
 
 [ARCHITECTURE DIAGRAM REQUIRED — DETECTION FLOW]
 
-## Screenshots needed
+## Screenshots
 
-The README is cleaned up, but visuals are still required for a proper flagship presentation.
+Captured from the verified Docker Compose stack in this repository using the bundled sample detections.
 
-- [SCREENSHOT REQUIRED — DASHBOARD OVERVIEW]
-- [SCREENSHOT REQUIRED — ATT&CK HEATMAP]
-- [SCREENSHOT REQUIRED — SPLUNK EXPORT / ANALYTICS VIEW]
-- [ARCHITECTURE DIAGRAM REQUIRED — DETECTION VALIDATION + EXPORT FLOW]
+### Dashboard overview
+
+![DetLab dashboard overview](docs/images/dashboard-overview.png)
+
+### ATT&CK coverage heatmap
+
+![DetLab ATT&CK heatmap](docs/images/attack-heatmap.png)
+
+### Verified Splunk export artifact
+
+![DetLab Splunk export](docs/images/splunk-export.png)
+
+[ARCHITECTURE DIAGRAM REQUIRED — DETECTION VALIDATION + EXPORT FLOW]
 
 ## Quick start with Docker
 
@@ -107,6 +116,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
+    environment:
+      DETLAB_ROOT_PATH: /api
     volumes:
       - ./detections:/workspace/detections:ro
 
@@ -120,7 +131,7 @@ services:
       - api
 ```
 
-This setup builds the FastAPI service from `Dockerfile.api`, builds the Next.js dashboard from `web/Dockerfile`, exposes the web UI on port `3000`, and mounts `./detections` read-only into the API container so the dashboard and API reflect the local detection content.
+This setup builds the FastAPI service from `Dockerfile.api`, builds the Next.js dashboard from `web/Dockerfile`, exposes the web UI on port `3000`, mounts `./detections` read-only into the API container, and configures FastAPI docs so `/api/docs` works correctly through the web proxy.
 
 ### Start
 
@@ -134,6 +145,7 @@ docker compose up -d --build
 docker compose ps
 curl http://localhost:3000/api/health
 curl http://localhost:3000/api/dashboard
+curl http://localhost:3000/api/openapi.json
 ```
 
 Expected health response:
@@ -169,6 +181,7 @@ docker compose down
 - The web container uses a committed `package-lock.json` and `npm ci` for deterministic installs.
 - The API is not published directly to the host in the current Compose setup.
 - Detection content is mounted into the API container from `./detections`.
+- `DETLAB_ROOT_PATH=/api` is used only for the proxied Docker deployment so Swagger/OpenAPI URLs resolve correctly at `/api/docs`.
 
 ## Local development
 

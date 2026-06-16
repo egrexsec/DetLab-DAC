@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
+    environment:
+      DETLAB_ROOT_PATH: /api
     volumes:
       - ./detections:/workspace/detections:ro
 

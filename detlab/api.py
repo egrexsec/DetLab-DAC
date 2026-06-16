@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -7,7 +8,9 @@ from detlab.analytics import generate_analytics
 from detlab.scoring import generate_score_report
 from detlab.validators import load_detection_dir, load_detection_file
 
-app = FastAPI(title="DetLab API", version="0.1.0")
+ROOT_PATH = os.getenv("DETLAB_ROOT_PATH", "")
+
+app = FastAPI(title="DetLab API", version="0.1.0", root_path=ROOT_PATH)
 
 app.add_middleware(
     CORSMiddleware,
