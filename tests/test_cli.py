@@ -1,8 +1,22 @@
+from contextlib import contextmanager
 from pathlib import Path
+import os
+import tempfile
 from typer.testing import CliRunner
 from detlab.main import app
 
 runner = CliRunner()
+
+
+@contextmanager
+def isolated_workspace():
+    previous = Path.cwd()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        os.chdir(tmpdir)
+        try:
+            yield Path(tmpdir)
+        finally:
+            os.chdir(previous)
 
 SAMPLE_DETECTION = """id: DET-0001
 title: Suspicious Encoded PowerShell
@@ -42,7 +56,7 @@ def write_sample_detection():
 
 
 def test_validate_passes_for_sample_detections():
-    with runner.isolated_filesystem():
+    with isolated_workspace():
         write_sample_detection()
         result = runner.invoke(app, ["validate", "detections"])
         assert result.exit_code == 0, result.output
@@ -50,7 +64,7 @@ def test_validate_passes_for_sample_detections():
 
 
 def test_report_generates_markdown():
-    with runner.isolated_filesystem():
+    with isolated_workspace():
         write_sample_detection()
         result = runner.invoke(
             app,
@@ -61,7 +75,7 @@ def test_report_generates_markdown():
 
 
 def test_map_attck_generates_json():
-    with runner.isolated_filesystem():
+    with isolated_workspace():
         write_sample_detection()
         result = runner.invoke(app, ["map-attck", "detections", "--output", "reports/attack-map.json"])
         assert result.exit_code == 0, result.output
