@@ -1,16 +1,24 @@
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from detlab.analytics import generate_analytics
 from detlab.packs import list_pack_reports
+from detlab.processing import (
+    UnsupportedConversionTargetError,
+    convert_detection_content,
+    inspect_detection_content,
+)
 from detlab.scoring import generate_score_report
 from detlab.validators import load_detection_dir, load_detection_file
 
 ROOT_PATH = os.getenv("DETLAB_ROOT_PATH", "")
 PACK_ROOT = Path(os.getenv("DETLAB_PACK_ROOT", "examples/packs"))
+MAX_DETECTION_REQUEST_BYTES = 25_000
 
 TACTIC_PACK_MAP = {
     "credential-access": "credential-access",
@@ -34,6 +42,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def reject_oversized_detection_requests(request: Request, call_next):
+    if request.url.path.endswith("/detections/inspect") or request.url.path.endswith("/detections/convert"):
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                declared_length = int(content_length)
+            except ValueError:
+                return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length header"})
+            if declared_length > MAX_DETECTION_REQUEST_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": f"Detection request body exceeds {MAX_DETECTION_REQUEST_BYTES} bytes"},
+                )
+    return await call_next(request)
+
+
+class DetectionInspectRequest(BaseModel):
+    content: str = Field(..., min_length=1, max_length=20000)
+
+
+class DetectionConvertRequest(BaseModel):
+    content: str = Field(..., min_length=1, max_length=20000)
+    target: str = Field(..., min_length=1, max_length=32)
 
 
 
@@ -147,3 +181,23 @@ def packs():
 @app.get("/dashboard")
 def dashboard(path: str = "detections"):
     return _build_dashboard_payload(path)
+
+
+@app.post("/detections/inspect")
+def inspect_detection(request: DetectionInspectRequest):
+    result = inspect_detection_content(request.content)
+    if result["valid"]:
+        return result
+    return JSONResponse(status_code=422, content=result)
+
+
+@app.post("/detections/convert")
+def convert_detection(request: DetectionConvertRequest):
+    try:
+        result = convert_detection_content(request.content, request.target)
+    except UnsupportedConversionTargetError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if result["valid"]:
+        return result
+    return JSONResponse(status_code=422, content=result)

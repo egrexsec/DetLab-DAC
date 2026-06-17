@@ -14,14 +14,20 @@ def _normalize_field(field: str) -> str:
     return FIELD_MAP.get(base, base)
 
 
+def _escape_value(value: str) -> str:
+    return value.replace('\\', '\\\\').replace('"', '\\"')
+
+
+
 def _render_value(field: str, value: str) -> str:
+    escaped = _escape_value(value)
     if "contains" in field:
-        return f'{_normalize_field(field)}="*{value}*"'
+        return f'{_normalize_field(field)}="*{escaped}*"'
 
     if "endswith" in field:
-        return f'{_normalize_field(field)}="*{value}"'
+        return f'{_normalize_field(field)}="*{escaped}"'
 
-    return f'{_normalize_field(field)}="{value}"'
+    return f'{_normalize_field(field)}="{escaped}"'
 
 
 def build_splunk_search(detection: Detection) -> str:

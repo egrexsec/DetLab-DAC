@@ -14,16 +14,22 @@ def _normalize_field(field: str) -> str:
 
 
 
+def _escape_value(value: str) -> str:
+    return value.replace('\\', '\\\\').replace('"', '\\"')
+
+
+
 def _render_condition(field: str, value: str) -> str:
     normalized = _normalize_field(field)
+    escaped = _escape_value(value)
 
     if "contains" in field:
-        return f'{normalized} like "*{value}*"'
+        return f'{normalized} like "*{escaped}*"'
 
     if "endswith" in field:
-        return f'{normalized} like "*{value}"'
+        return f'{normalized} like "*{escaped}"'
 
-    return f'{normalized} == "{value}"'
+    return f'{normalized} == "{escaped}"'
 
 
 

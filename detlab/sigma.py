@@ -88,6 +88,7 @@ def sigma_rule_to_detection(rule: dict[str, Any], detection_id: str) -> dict[str
 
     logsource = rule.get("logsource") or {}
     detection_logic = rule.get("detection") or {}
+    selection = detection_logic.get("selection", detection_logic)
 
     converted = {
         "id": detection_id,
@@ -116,7 +117,7 @@ def sigma_rule_to_detection(rule: dict[str, Any], detection_id: str) -> dict[str
             }
         ],
         "detection": {
-            "selection": detection_logic,
+            "selection": selection,
             "condition": _normalize_text(detection_logic.get("condition"), "selection"),
         },
     }

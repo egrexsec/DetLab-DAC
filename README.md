@@ -99,6 +99,20 @@ Included examples:
 detlab pack-report examples/packs/windows-core
 ```
 
+### 6. In-Platform Detection Workbench
+
+Draft a detection directly in the web UI, inspect validation results, review score breakdowns, and preview backend-specific conversions without writing files first.
+
+Current in-app workflow:
+- paste or edit detection YAML in the dashboard
+- inspect schema validity and parsed detection metadata
+- review score, false-positive risk, and recommendations
+- preview conversion output for Sigma, Splunk SPL, Sentinel KQL, or Elastic EQL
+
+The same flow is also available through the API:
+- `POST /api/detections/inspect`
+- `POST /api/detections/convert`
+
 ## Screenshots
 
 Captured from the verified Docker Compose stack in this repository.
@@ -191,6 +205,15 @@ detlab score detections --format markdown --output reports/scores.md
 detlab attack report detections --format markdown --output reports/attack-coverage.md
 detlab convert detections/windows/encoded_powershell.yml --target splunk --output exports/encoded_powershell.spl
 ```
+
+### Browser workflow
+
+1. Open `http://localhost:3000`
+2. Scroll to **Create & Inspect Detection**
+3. Paste or edit detection YAML
+4. Click **Inspect & Score** to validate and score it
+5. Choose `Splunk`, `Sigma`, `KQL`, or `EQL`
+6. Click **Preview Conversion** to render backend output in-place
 
 ## Sample Detection Packs
 

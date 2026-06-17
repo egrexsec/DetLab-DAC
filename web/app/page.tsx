@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import DetectionWorkbench from '../components/detection-workbench'
 import {
   Bar,
   BarChart,
@@ -322,6 +323,7 @@ export default function HomePage() {
               <li>`detlab convert detections/windows/encoded_powershell.yml --target splunk`</li>
             </ul>
           </div>
+          <DetectionWorkbench />
         </section>
 
         <section id="coverage" style={{ marginTop: '36px' }}>

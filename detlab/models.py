@@ -4,6 +4,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 ATTACK_ID_RE = re.compile(r"^T\d{4}(?:\.\d{3})?$")
+SELECTION_KEY_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(?:\|(contains|endswith))?$")
 
 
 class LogSource(BaseModel):
@@ -37,6 +38,30 @@ class TestRef(BaseModel):
 class DetectionLogic(BaseModel):
     selection: dict[str, Any]
     condition: str
+
+    @field_validator("selection")
+    @classmethod
+    def validate_selection(cls, value: dict[str, Any]) -> dict[str, Any]:
+        for key, raw_value in value.items():
+            if not SELECTION_KEY_RE.match(key):
+                raise ValueError(
+                    "detection.selection keys must use alphanumeric field names and optional |contains or |endswith operators"
+                )
+            if isinstance(raw_value, list):
+                if not raw_value:
+                    raise ValueError("detection.selection list values must not be empty")
+                if any(isinstance(item, (dict, list, tuple, set)) for item in raw_value):
+                    raise ValueError("detection.selection values must be scalars or flat lists of scalars")
+            elif isinstance(raw_value, (dict, list, tuple, set)):
+                raise ValueError("detection.selection values must be scalars or flat lists of scalars")
+        return value
+
+    @field_validator("condition")
+    @classmethod
+    def validate_condition(cls, value: str) -> str:
+        if value.strip() != "selection":
+            raise ValueError("detection.condition currently only supports 'selection'")
+        return "selection"
 
 
 class Detection(BaseModel):
