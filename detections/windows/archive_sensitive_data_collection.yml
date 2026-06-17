@@ -1,0 +1,34 @@
+id: DET-0106
+title: Archive Sensitive Data for Collection
+description: Detects command-line archiving of user document paths that may indicate local data collection prior to staging or theft.
+
+logsource:
+  product: windows
+  service: process_creation
+
+attack:
+  technique: T1005
+  tactic: collection
+
+severity: medium
+status: testing
+author: Mell0wx
+
+references:
+  - https://attack.mitre.org/techniques/T1005/
+
+falsepositives:
+  - Legitimate user backup or archive creation workflows
+
+tests:
+  - name: Archive documents directory
+    source: attack-simulation
+    test_id: T1005
+
+detection:
+  selection:
+    Image|endswith: '\7z.exe'
+    CommandLine|contains:
+      - 'Documents'
+      - '.zip'
+  condition: selection

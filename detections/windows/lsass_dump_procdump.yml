@@ -1,0 +1,34 @@
+id: DET-0103
+title: LSASS Memory Dump via ProcDump
+description: Detects ProcDump command lines commonly used to dump LSASS process memory for credential access.
+
+logsource:
+  product: windows
+  service: process_creation
+
+attack:
+  technique: T1003.001
+  tactic: credential-access
+
+severity: critical
+status: testing
+author: Mell0wx
+
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+
+falsepositives:
+  - Security tooling or authorized incident response memory capture
+
+tests:
+  - name: ProcDump lsass dump command
+    source: attack-simulation
+    test_id: T1003.001
+
+detection:
+  selection:
+    Image|endswith: '\procdump.exe'
+    CommandLine|contains:
+      - 'lsass'
+      - '-ma'
+  condition: selection

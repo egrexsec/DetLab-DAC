@@ -1,0 +1,34 @@
+id: DET-0108
+title: Volume Shadow Copy Deletion
+description: Detects vssadmin shadow copy deletion commands associated with impact operations and recovery inhibition.
+
+logsource:
+  product: windows
+  service: process_creation
+
+attack:
+  technique: T1490
+  tactic: impact
+
+severity: critical
+status: testing
+author: Mell0wx
+
+references:
+  - https://attack.mitre.org/techniques/T1490/
+
+falsepositives:
+  - Rare sanctioned backup maintenance or storage cleanup activity
+
+tests:
+  - name: Delete volume shadow copies
+    source: attack-simulation
+    test_id: T1490
+
+detection:
+  selection:
+    Image|endswith: '\vssadmin.exe'
+    CommandLine|contains:
+      - 'delete'
+      - 'shadows'
+  condition: selection

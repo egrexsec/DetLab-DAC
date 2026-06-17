@@ -1,0 +1,34 @@
+id: DET-0107
+title: Rclone Data Exfiltration Command
+description: Detects rclone copy commands that may indicate exfiltration over a web service or other external protocol.
+
+logsource:
+  product: windows
+  service: process_creation
+
+attack:
+  technique: T1048
+  tactic: exfiltration
+
+severity: high
+status: testing
+author: Mell0wx
+
+references:
+  - https://attack.mitre.org/techniques/T1048/
+
+falsepositives:
+  - Approved file synchronization to sanctioned remote storage
+
+tests:
+  - name: Rclone copy to remote target
+    source: attack-simulation
+    test_id: T1048
+
+detection:
+  selection:
+    Image|endswith: '\rclone.exe'
+    CommandLine|contains:
+      - ' copy '
+      - ':'
+  condition: selection

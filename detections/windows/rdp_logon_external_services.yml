@@ -1,0 +1,32 @@
+id: DET-0101
+title: RDP External Remote Services Logon
+description: Detects successful Remote Desktop logons that may indicate ATT&CK external remote services initial access activity.
+
+logsource:
+  product: windows
+  service: security
+
+attack:
+  technique: T1133
+  tactic: initial-access
+
+severity: high
+status: testing
+author: Mell0wx
+
+references:
+  - https://attack.mitre.org/techniques/T1133/
+
+falsepositives:
+  - Legitimate remote administration through approved RDP paths
+
+tests:
+  - name: Successful RDP logon event
+    source: attack-simulation
+    test_id: T1133
+
+detection:
+  selection:
+    EventID: 4624
+    LogonType: 10
+  condition: selection

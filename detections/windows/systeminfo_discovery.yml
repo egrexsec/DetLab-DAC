@@ -1,0 +1,31 @@
+id: DET-0104
+title: System Information Discovery Commands
+description: Detects systeminfo execution used to enumerate host details during ATT&CK system information discovery.
+
+logsource:
+  product: windows
+  service: process_creation
+
+attack:
+  technique: T1082
+  tactic: discovery
+
+severity: medium
+status: testing
+author: Mell0wx
+
+references:
+  - https://attack.mitre.org/techniques/T1082/
+
+falsepositives:
+  - Administrative inventory or troubleshooting scripts
+
+tests:
+  - name: systeminfo discovery command
+    source: attack-simulation
+    test_id: T1082
+
+detection:
+  selection:
+    Image|endswith: '\systeminfo.exe'
+  condition: selection

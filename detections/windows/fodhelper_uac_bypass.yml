@@ -1,0 +1,32 @@
+id: DET-0102
+title: Fodhelper UAC Bypass Attempt
+description: Detects fodhelper.exe execution patterns commonly associated with UAC bypass for local privilege escalation.
+
+logsource:
+  product: windows
+  service: process_creation
+
+attack:
+  technique: T1548.002
+  tactic: privilege-escalation
+
+severity: high
+status: testing
+author: Mell0wx
+
+references:
+  - https://attack.mitre.org/techniques/T1548/002/
+
+falsepositives:
+  - Rare legitimate troubleshooting activity using fodhelper
+
+tests:
+  - name: Fodhelper UAC bypass execution
+    source: attack-simulation
+    test_id: T1548.002
+
+detection:
+  selection:
+    Image|endswith: '\fodhelper.exe'
+    ParentImage|endswith: '\cmd.exe'
+  condition: selection

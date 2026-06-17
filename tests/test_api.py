@@ -59,18 +59,16 @@ def test_dashboard_endpoint_exposes_workbench_sections():
 
 
 
-def test_dashboard_endpoint_exposes_actionable_review_queue():
+def test_dashboard_endpoint_reports_populated_attack_map_without_high_risk_gaps():
     response = client.get('/dashboard')
 
     assert response.status_code == 200
     body = response.json()
 
-    assert body['review_queue']['high_risk_gaps']
-    first_gap = body['review_queue']['high_risk_gaps'][0]
-    assert first_gap['tactic']
-    assert first_gap['priority'] == 'high'
-    assert first_gap['recommended_pack']
-    assert first_gap['recommended_action']
+    assert body['coverage']['coverage_gaps'] == []
+    assert body['coverage']['high_risk_gaps'] == []
+    assert body['summary']['coverage_percent'] == 100.0
+    assert all(count >= 1 for count in body['coverage']['by_tactic'].values())
 
 
 
