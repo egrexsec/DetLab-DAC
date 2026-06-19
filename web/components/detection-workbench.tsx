@@ -57,6 +57,32 @@ attack:
 severity: high
 status: experimental
 author: Mell0wx
+domain:
+  - endpoint
+platforms:
+  - windows
+attack_context:
+  - technique: T1027
+    tactic: defense-evasion
+    name: Obfuscated Files or Information
+    coverage: partial
+    rationale: Encoded commands often overlap with obfuscation tradecraft.
+data_sources:
+  - name: Sysmon Process Creation
+    kind: endpoint
+    provider: windows
+    event_names:
+      - Event ID 1
+triage_steps:
+  - step: Validate the full command line and parent process.
+    priority: high
+investigation_steps:
+  - step: Review child processes and nearby network activity.
+    priority: high
+related_detections:
+  - detection_id: DET-0003
+    relationship: follow_on
+    rationale: Encoded PowerShell often leads into download behavior.
 references:
   - https://attack.mitre.org/techniques/T1059/001/
 falsepositives:

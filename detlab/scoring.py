@@ -4,9 +4,12 @@ from statistics import mean
 from detlab.models import Detection
 
 STATUS_SCORES = {
+    "draft": 30,
     "experimental": 45,
     "testing": 75,
+    "validated": 82,
     "stable": 90,
+    "production": 92,
     "deprecated": 20,
 }
 

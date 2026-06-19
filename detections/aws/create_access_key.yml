@@ -1,0 +1,109 @@
+id: DET-0201
+title: AWS CreateAccessKey
+description: Detects creation of a new IAM access key that may indicate persistence, privilege staging, or hands-on-keyboard cloud abuse.
+logsource:
+  product: aws
+  service: cloudtrail
+attack:
+  technique: T1098
+  tactic: persistence
+severity: high
+status: validated
+author: Mell0wx
+domain:
+  - cloud
+  - identity
+platforms:
+  - aws
+attack_context:
+  - technique: T1078
+    tactic: defense-evasion
+    name: Valid Accounts
+    coverage: related
+    rationale: New access keys often support continued use of compromised identities.
+  - technique: T1484.001
+    tactic: privilege-escalation
+    name: Domain or Tenant Policy Modification
+    coverage: gap
+    rationale: Access key creation should trigger review of follow-on policy changes or privilege expansion.
+  - technique: T1530
+    tactic: collection
+    name: Data from Cloud Storage
+    coverage: gap
+    rationale: Fresh access keys may be used quickly for cloud data access and collection.
+data_sources:
+  - name: AWS CloudTrail Management Events
+    kind: cloud
+    provider: aws
+    event_names:
+      - CreateAccessKey
+    notes: Primary event source for access-key creation and caller identity.
+  - name: AWS IAM Credential Report
+    kind: identity
+    provider: aws
+    event_names: []
+    notes: Useful for key age, rotation posture, and dormant account review.
+triage_steps:
+  - step: Identify the actor, target IAM principal, source IP, MFA context, and whether the key was expected.
+    priority: high
+    rationale: Establishes whether the access key creation aligns with approved provisioning workflows.
+  - step: Verify whether the target account already had active keys or showed recent anomalous console activity.
+    priority: high
+    rationale: Multiple active keys and suspicious login context raise persistence risk.
+investigation_steps:
+  - step: Review CloudTrail for immediate follow-on API calls from the new access key, including IAM, STS, S3, and Secrets Manager activity.
+    priority: high
+    rationale: Newly created keys are frequently used within minutes if the actor is malicious.
+  - step: Check whether the key creation was followed by policy attachment, console login profile creation, or region-wide enumeration.
+    priority: medium
+    rationale: Helps scope whether the event is a simple admin action or broader account takeover.
+escalation_guidance:
+  - Escalate immediately if the key was created outside approved admin workflows, lacks MFA context, or is followed by privilege or data-access activity.
+hunt_suggestions:
+  - name: IAM persistence follow-on hunt
+    hypothesis: Suspicious access-key creation may be part of a broader IAM persistence chain.
+    query_hint: Hunt for CreateAccessKey, CreateLoginProfile, AttachUserPolicy, PutUserPolicy, and AssumeRole activity around the same principal.
+artifacts:
+  - name: CloudTrail management event record
+    category: cloud_log
+    notes: Preserve the full JSON event including userIdentity, sourceIPAddress, requestParameters, and session context.
+  - name: IAM credential report snapshot
+    category: identity_log
+    notes: Helps confirm key inventory, age, and whether multiple active keys already existed.
+velociraptor_artifacts:
+  - AWS.CloudTrail
+cloud_telemetry:
+  - provider: aws
+    source: CloudTrail
+    event_names:
+      - CreateAccessKey
+      - CreateLoginProfile
+      - AttachUserPolicy
+      - PutUserPolicy
+      - AssumeRole
+    notes: Review immediate follow-on identity and privilege actions from the same actor or target principal.
+related_detections:
+  - detection_id: DET-0003
+    relationship: similar
+    rationale: Both detections represent attacker staging behavior that commonly precedes execution or collection.
+response_actions:
+  - title: Disable or delete the suspicious access key.
+    priority: high
+    description: Cut off continued API access once evidence is preserved.
+  - title: Reset credentials and review the full IAM principal blast radius.
+    priority: high
+    description: Required when the account may already be compromised.
+references:
+  - https://attack.mitre.org/techniques/T1098/
+  - https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateAccessKey.html
+falsepositives:
+  - Approved IAM key provisioning during onboarding or break-glass rotation
+tests:
+  - name: Simulated CloudTrail CreateAccessKey event
+    source: lab
+    test_id: aws-create-access-key-1
+detection:
+  selection:
+    eventName: CreateAccessKey
+    eventSource: iam.amazonaws.com
+  condition: selection
