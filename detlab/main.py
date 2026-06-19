@@ -266,10 +266,8 @@ def pack_report(
     report = generate_pack_report(pack_dir)
     if format == "markdown":
         content = render_pack_report_markdown(report)
-        suffix = ".md"
     elif format == "json":
         content = render_pack_report_json(report)
-        suffix = ".json"
     else:
         raise typer.Exit(code=1)
 
