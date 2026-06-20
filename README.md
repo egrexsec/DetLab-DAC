@@ -118,23 +118,37 @@ The same flow is also available through the API:
 
 ## Screenshots
 
-Captured from the verified Docker Compose stack in this repository.
+Captured on 2026-06-20 from the verified Docker Compose stack in this repository against the default GitHub-backed source (`egrexsec/cybersecurity-playbook` → `mde/advanced-hunting`).
 
-### 1. Dashboard Overview
+### 1. Detection Workspace Overview
 
-![Dashboard Overview](docs/images/dashboard-overview.png)
+Top-level workspace view with the detection catalog, selected detection context, query, and investigation guidance.
 
-### 2. ATT&CK Heatmap
+![Detection Workspace Overview](docs/images/dashboard-overview.png)
 
-![ATT&CK Heatmap](docs/images/attack-heatmap.png)
+### 2. ATT&CK Heat Map
 
-### 3. Detection Score View
+Technique-context view showing direct coverage, partial coverage, related activity, and visible gaps for the selected detection.
 
-![Detection Score View](docs/images/detection-score-view.png)
+![ATT&CK Heat Map](docs/images/attack-heatmap.png)
 
-### 4. Detection Pack View
+### 3. Score Review
 
-![Detection Pack View](docs/images/detection-pack-view.png)
+Library-level scoring summary with distribution and per-detection quality breakdown.
+
+![Score Review](docs/images/detection-score-view.png)
+
+### 4. Repository Source
+
+GitHub-backed source metadata and sync history for the active markdown detection library.
+
+![Repository Source](docs/images/repository-source-view.png)
+
+### 5. Validation & Conversion Workbench
+
+In-browser authoring flow for validating detections, inspecting results, and previewing backend conversions.
+
+![Validation & Conversion Workbench](docs/images/validation-workbench-view.png)
 
 ## Architecture
 
