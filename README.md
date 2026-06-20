@@ -1,8 +1,8 @@
 # DetLab
 
-Detection Engineering Workbench
+Detection-First Visual Detection Engineering, Threat Hunting & DFIR Platform
 
-Build, validate, score, convert, test, and visualize detections from a single platform.
+Build, validate, score, convert, test, and visually explore detections from a single platform.
 
 DetLab is built for detection engineers, threat hunters, SOC analysts, DFIR analysts, and security engineers who want a practical way to improve a detection library without standing up a heavy governance platform.
 
@@ -83,33 +83,36 @@ Generate ATT&CK-oriented reports for:
 detlab attack report detections --format markdown --output reports/attack-coverage.md
 ```
 
-### 5. Detection Packs
+### 5. GitHub-Backed Detection Source
 
-Ship reusable sample packs for focused demo and adoption workflows.
-
-Included examples:
-- Windows Core
-- PowerShell
-- Credential Access
-- Persistence
-- CloudTrail
-- Linux Core
+Point DetLab at a directory in a GitHub repo and sync it into the analysis workspace.
 
 ```bash
-detlab pack-report examples/packs/windows-core
+detlab source-info detections
+detlab sync-source detections
 ```
 
-### 6. In-Platform Detection Workbench
+The current default source is:
+- repo: `egrexsec/cybersecurity-playbook`
+- ref: `main`
+- subdir: `mde/advanced-hunting`
 
-Draft a detection directly in the web UI, inspect validation results, review score breakdowns, and preview backend-specific conversions without writing files first.
+### 6. In-Platform Detection Workspace
+
+Select a detection directly in the web UI and pivot through the investigation workflow without leaving the page.
 
 Current in-app workflow:
-- paste or edit detection YAML in the dashboard
-- inspect schema validity and parsed detection metadata
-- review score, false-positive risk, and recommendations
-- preview conversion output for Sigma, Splunk SPL, Sentinel KQL, or Elastic EQL
+- search the detection catalog by name, domain, platform, or ATT&CK technique
+- open a detection workspace with overview, ATT&CK context, data sources, and detection logic
+- review triage guidance, investigation steps, false positives, and escalation guidance
+- collect DFIR artifacts, Velociraptor references, cloud telemetry pivots, and response actions
+- inspect the ATT&CK heat map and relationship graph for adjacent activity and follow-on gaps
+- use the detection authoring workbench to validate schema, review scoring, and preview backend conversions
 
 The same flow is also available through the API:
+- `GET /api/detections/catalog`
+- `GET /api/detections/{detection_id}/workspace`
+- `GET /api/schema/domain`
 - `POST /api/detections/inspect`
 - `POST /api/detections/convert`
 
@@ -135,18 +138,19 @@ Captured from the verified Docker Compose stack in this repository.
 
 ## Architecture
 
-DetLab is designed as a detection engineering workbench with a fast local demo path and a workflow that maps cleanly to real SOC engineering tasks.
+DetLab is evolving from a pure detection engineering workbench into a detection-first investigation platform with a fast local demo path and a workflow that maps cleanly to real SOC engineering tasks.
 
 ![DetLab Architecture Diagram](docs/images/architecture-diagram.png)
 
 Architecture highlights:
 - **Typer CLI** for validation, scoring, ATT&CK reporting, and backend export workflows
-- **FastAPI** for health, validation, scoring, analytics, packs, and dashboard data APIs
-- **Next.js dashboard** for overview, ATT&CK coverage, detection quality, packs, and reporting views
+- **FastAPI** for health, validation, scoring, analytics, domain schema, detection catalog, workspace, source, and dashboard APIs
+- **Next.js application** for a detection-first catalog, investigation workspace, ATT&CK heat-map context, quality views, and authoring workbench flows
+- **Detection domain schema** for investigation steps, artifacts, cloud telemetry, related detections, and response actions
 - **Scoring engine** for coverage, specificity, metadata, maintainability, and false-positive risk calculations
 - **ATT&CK analytics** for tactic/technique coverage, weak coverage, and high-risk gaps
 - **Export engine** for Splunk SPL, Sigma, Sentinel KQL, and Elastic EQL outputs
-- **Detection packs** for reusable demo and engineering-focused content bundles
+- **GitHub-backed source sync** for pulling a repo directory into the active analysis workspace
 - **Docker Compose** for one-command local deployment
 
 For the editable source diagram, see `docs/architecture-diagram.html`.
@@ -178,9 +182,12 @@ Open:
 `.env.example` includes:
 - `DETLAB_ROOT_PATH=/api`
 - `NEXT_PUBLIC_API_BASE_URL=/api`
-- `DETLAB_PACK_ROOT=/workspace/examples/packs`
+- `DETLAB_SOURCE_REPO=egrexsec/cybersecurity-playbook`
+- `DETLAB_SOURCE_REF=main`
+- `DETLAB_SOURCE_SUBDIR=mde/advanced-hunting`
 
 The `/api` root path keeps FastAPI docs and OpenAPI working correctly when the UI proxies requests through the web container.
+The GitHub source settings tell the API which repo directory to sync into the active analysis workspace.
 
 ### Useful commands
 

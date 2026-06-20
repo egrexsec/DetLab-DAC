@@ -2,8 +2,9 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 
 export const metadata: Metadata = {
-  title: 'DetLab | Detection Engineering Workbench',
-  description: 'Build, validate, score, convert, test, and visualize detections from a single platform.',
+  title: 'DetLab | Detection-First Threat Hunting & DFIR Platform',
+  description:
+    'Select a detection and immediately pivot into ATT&CK context, investigation guidance, DFIR artifacts, related detections, and cloud telemetry.',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

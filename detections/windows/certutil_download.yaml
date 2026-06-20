@@ -10,6 +10,73 @@ attack:
 severity: high
 status: experimental
 author: Mell0wx
+domain:
+  - endpoint
+platforms:
+  - windows
+attack_context:
+  - technique: T1218.011
+    tactic: defense-evasion
+    name: Rundll32
+    coverage: related
+    rationale: Downloaded payloads are often proxied into execution by LOLBins.
+  - technique: T1059.001
+    tactic: execution
+    name: PowerShell
+    coverage: related
+    rationale: Certutil download activity frequently sits in broader script-driven chains.
+  - technique: T1547
+    tactic: persistence
+    name: Boot or Logon Autostart Execution
+    coverage: gap
+    rationale: Downloaded tooling often leads to persistence actions that need separate detections.
+data_sources:
+  - name: Sysmon Process Creation
+    kind: endpoint
+    provider: windows
+    event_names:
+      - Event ID 1
+    notes: Captures certutil command-line flags and remote URL usage.
+  - name: Proxy or DNS telemetry
+    kind: network
+    provider: network
+    event_names: []
+    notes: Helps validate remote destination and follow-on connections.
+triage_steps:
+  - step: Validate the URL, destination path, parent process, and user context for the certutil execution.
+    priority: high
+    rationale: Distinguishes admin certificate handling from payload retrieval.
+investigation_steps:
+  - step: Retrieve the downloaded file hash, signer information, and subsequent execution history.
+    priority: high
+    rationale: Determines whether certutil delivered a benign artifact or malware stage.
+escalation_guidance:
+  - Escalate if certutil downloads into temp, user profile, or startup-adjacent directories.
+hunt_suggestions:
+  - name: Alternate download utility hunt
+    hypothesis: The same host or user may also leverage bitsadmin, PowerShell, curl, or mshta for payload retrieval.
+    query_hint: Search for outbound download utilities and suspicious remote URLs within the same investigation window.
+artifacts:
+  - name: Browser and proxy history
+    category: network
+    notes: Can corroborate remote destination access around the certutil event.
+  - name: Downloaded file on disk
+    category: file
+    notes: Preserve the artifact, metadata, and hash before cleanup.
+velociraptor_artifacts:
+  - Windows.Forensics.Usn
+  - Windows.Network.NetstatEnriched
+related_detections:
+  - detection_id: DET-0001
+    relationship: prerequisite
+    rationale: Script-driven staging often precedes certutil download behavior.
+  - detection_id: DET-0002
+    relationship: follow_on
+    rationale: Downloaded payloads may be executed through rundll32 or similar LOLBins.
+response_actions:
+  - title: Block or sinkhole the remote destination if confirmed malicious.
+    priority: high
+    description: Prevents additional payload retrieval while scoping the incident.
 references:
   - https://attack.mitre.org/techniques/T1105/
 falsepositives:

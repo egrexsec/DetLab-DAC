@@ -10,6 +10,101 @@ attack:
 severity: high
 status: experimental
 author: Mell0wx
+domain:
+  - endpoint
+platforms:
+  - windows
+attack_context:
+  - technique: T1027
+    tactic: defense-evasion
+    name: Obfuscated Files or Information
+    coverage: partial
+    rationale: Encoded PowerShell often uses obfuscated command content.
+  - technique: T1105
+    tactic: command-and-control
+    name: Ingress Tool Transfer
+    coverage: related
+    rationale: PowerShell execution commonly pivots to payload retrieval.
+  - technique: T1547
+    tactic: persistence
+    name: Boot or Logon Autostart Execution
+    coverage: gap
+    rationale: Persistence often follows successful script execution and should be reviewed.
+  - technique: T1003
+    tactic: credential-access
+    name: OS Credential Dumping
+    coverage: gap
+    rationale: Post-exploitation PowerShell often precedes credential-access activity.
+data_sources:
+  - name: Sysmon Process Creation
+    kind: endpoint
+    provider: windows
+    event_names:
+      - Event ID 1
+    notes: Command-line and image telemetry for PowerShell execution.
+  - name: PowerShell Script Block Logging
+    kind: endpoint
+    provider: windows
+    event_names:
+      - Event ID 4104
+    notes: Helps recover decoded or partially decoded script content.
+triage_steps:
+  - step: Validate the parent process, user, host, and full command line for the encoded PowerShell execution.
+    priority: high
+    rationale: Determines whether the execution fits known admin tooling or likely hands-on-keyboard activity.
+  - step: Decode captured arguments where possible and compare them with approved scripts or management tooling.
+    priority: high
+    rationale: Separates benign automation from malicious script execution quickly.
+investigation_steps:
+  - step: Review adjacent process creation, network connections, and subsequent child processes from the same PowerShell instance.
+    priority: high
+    rationale: Encoded PowerShell is commonly an entry point into download, execution, or persistence chains.
+  - step: Search for repeated encoded invocations across the same user, host, and parent process lineage.
+    priority: medium
+    rationale: Helps scope whether the alert is isolated or part of a campaign.
+escalation_guidance:
+  - Escalate if the decoded content retrieves remote payloads, tampers with security controls, or stages persistence.
+  - Escalate if the same user or host shows repeated encoded execution outside approved administration windows.
+hunt_suggestions:
+  - name: PowerShell download cradle follow-on hunt
+    hypothesis: Hosts using encoded PowerShell may also retrieve remote payloads or stage secondary scripts.
+    query_hint: Search for PowerShell plus WebClient, Invoke-WebRequest, Start-BitsTransfer, or outbound connections near the alert time.
+artifacts:
+  - name: PowerShell operational logs
+    category: event_log
+    path: Microsoft-Windows-PowerShell/Operational
+    notes: Useful for script execution context and errors.
+  - name: PSReadLine history
+    category: file
+    path: '%APPDATA%\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt'
+    notes: May show interactive commands preceding the encoded invocation.
+velociraptor_artifacts:
+  - Windows.EventLogs.PowerShell
+  - Windows.Forensics.Persistence
+cloud_telemetry:
+  - provider: aws
+    source: CloudTrail
+    event_names:
+      - StartSession
+      - SendCommand
+    notes: Review cloud-driven remote administration if the host is managed through AWS Systems Manager.
+related_detections:
+  - detection_id: DET-0003
+    relationship: follow_on
+    rationale: Encoded PowerShell often leads to payload download activity.
+  - detection_id: DET-0002
+    relationship: investigate_next
+    rationale: Adversaries may pivot from PowerShell to LOLBin execution to evade controls.
+  - detection_id: DET-0103
+    relationship: follow_on
+    rationale: Successful script execution can precede credential-access tooling.
+response_actions:
+  - title: Isolate the host if decoded content is malicious or unknown.
+    priority: high
+    description: Prevent follow-on execution while preserving evidence.
+  - title: Revoke or monitor the affected user session.
+    priority: medium
+    description: Useful when the alert originates from interactive user context.
 references:
   - https://attack.mitre.org/techniques/T1059/001/
 falsepositives:

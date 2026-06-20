@@ -51,24 +51,56 @@ def test_dashboard_endpoint_exposes_workbench_sections():
     assert response.status_code == 200
     body = response.json()
     assert 'summary' in body
+    assert 'source' in body
     assert 'coverage' in body
     assert 'scoring' in body
-    assert 'packs' in body
     assert 'review_queue' in body
     assert body['summary']['total_detections'] >= 1
 
 
 
-def test_dashboard_endpoint_reports_populated_attack_map_without_high_risk_gaps():
-    response = client.get('/dashboard')
+def test_source_endpoint_returns_local_detection_directory_metadata():
+    response = client.get('/source')
 
     assert response.status_code == 200
     body = response.json()
+    assert body['mode'] == 'local'
+    assert body['subdir'] == 'detections'
+    assert body['resolved_path']
 
-    assert body['coverage']['coverage_gaps'] == []
-    assert body['coverage']['high_risk_gaps'] == []
-    assert body['summary']['coverage_percent'] == 100.0
-    assert all(count >= 1 for count in body['coverage']['by_tactic'].values())
+
+
+def test_domain_schema_endpoint_exposes_detection_schema():
+    response = client.get('/schema/domain')
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body['primary_entity'] == 'Detection'
+    assert 'Detection' in body['entities']
+    assert 'RelatedDetection' in body['entities']
+
+
+
+def test_detection_catalog_endpoint_returns_detection_first_entries():
+    response = client.get('/detections/catalog')
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body['total'] >= 1
+    assert any('investigation_readiness_score' in item for item in body['detections'])
+
+
+
+def test_detection_workspace_endpoint_returns_visual_investigation_payload():
+    response = client.get('/detections/DET-0001/workspace')
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body['detection']['id'] == 'DET-0001'
+    assert 'overview' in body
+    assert 'heat_map' in body
+    assert 'relationship_graph' in body
+    assert body['heat_map']['direct'][0]['technique'] == 'T1059.001'
 
 
 

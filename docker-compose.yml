@@ -5,6 +5,9 @@ services:
       dockerfile: Dockerfile.api
     environment:
       DETLAB_ROOT_PATH: /api
+      DETLAB_SOURCE_REPO: ${DETLAB_SOURCE_REPO:-egrexsec/cybersecurity-playbook}
+      DETLAB_SOURCE_REF: ${DETLAB_SOURCE_REF:-main}
+      DETLAB_SOURCE_SUBDIR: ${DETLAB_SOURCE_SUBDIR:-mde/advanced-hunting}
     volumes:
       - ./detections:/workspace/detections:ro
 

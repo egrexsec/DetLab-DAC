@@ -9,14 +9,16 @@ from rich.table import Table
 from detlab.analytics import generate_json_analytics, generate_markdown_analytics
 from detlab.attck import build_technique_map
 from detlab.dashboard import generate_dashboard
+from detlab.domain import load_detections
 from detlab.eql import export_eql_detection, export_eql_directory
 from detlab.kql import export_kql_detection, export_kql_directory
+from detlab.markdown_ingest import validate_markdown_detection_dir
 from detlab.navigator import generate_navigator_layer
-from detlab.packs import generate_pack_report, render_pack_report_json, render_pack_report_markdown
 from detlab.reporting import generate_json_report, generate_markdown_report, write_report
 from detlab.scoring import generate_json_score_report, generate_markdown_score_report
 from detlab.sigma import import_sigma_dir
 from detlab.sigma_export import export_sigma_detection, export_sigma_directory
+from detlab.sources import describe_detection_source, resolve_detection_dir
 from detlab.splunk import export_splunk_detection, export_splunk_directory
 from detlab.validators import load_detection_file, load_detection_dir
 
@@ -46,10 +48,21 @@ def main(
 
 
 def _load_valid_detections(path: Path):
-    _, valid, _ = load_detection_dir(path)
-    if not valid:
-        raise typer.Exit(code=1)
-    return [load_detection_file(p) for p in path.rglob("*.y*ml")]
+    try:
+        return load_detections(str(path))
+    except Exception as exc:
+        console.print(f"[red]Failed to load detections:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+
+
+def _validate_detection_source(path: Path) -> tuple[list[Path], bool, dict[Path, str]]:
+    resolved_path = resolve_detection_dir(path)
+    yaml_files, yaml_valid, yaml_errors = load_detection_dir(resolved_path)
+    markdown_files, markdown_valid, markdown_errors = validate_markdown_detection_dir(resolved_path)
+    files = sorted({*yaml_files, *markdown_files})
+    errors = {**yaml_errors, **markdown_errors}
+    return files, yaml_valid and markdown_valid, errors
 
 
 
@@ -93,7 +106,7 @@ def analytics(
 
 @app.command()
 def validate(path: Path = typer.Argument(Path("detections"))) -> None:
-    files, valid, errors = load_detection_dir(path)
+    files, valid, errors = _validate_detection_source(path)
 
     table = Table(title="Validation Results")
     table.add_column("File")
@@ -257,27 +270,20 @@ def export_eql(
     _render_export_table("EQL Export Results", outputs)
 
 
-@app.command("pack-report")
-def pack_report(
-    pack_dir: Path = typer.Argument(..., help="Path to a detection pack directory."),
-    format: str = typer.Option("markdown", "--format"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o"),
+@app.command("source-info")
+def source_info(
+    path: Path = typer.Argument(Path("detections"), help="Local path or GitHub-backed detection subdirectory."),
 ) -> None:
-    report = generate_pack_report(pack_dir)
-    if format == "markdown":
-        content = render_pack_report_markdown(report)
-    elif format == "json":
-        content = render_pack_report_json(report)
-    else:
-        raise typer.Exit(code=1)
+    source = describe_detection_source(path)
+    console.print(json.dumps(source, indent=2))
 
-    if output:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(content, encoding="utf-8")
-        console.print(f"[green]Pack report written to[/green] {output}")
-        return
 
-    console.print(content)
+@app.command("sync-source")
+def sync_source(
+    path: Path = typer.Argument(Path("detections"), help="Local path or GitHub-backed detection subdirectory."),
+) -> None:
+    resolved_path = resolve_detection_dir(path)
+    console.print(f"[green]Detection source ready at[/green] {resolved_path}")
 
 
 @app.command()

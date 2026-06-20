@@ -10,6 +10,73 @@ attack:
 severity: high
 status: experimental
 author: Mell0wx
+domain:
+  - endpoint
+platforms:
+  - windows
+attack_context:
+  - technique: T1059.001
+    tactic: execution
+    name: PowerShell
+    coverage: related
+    rationale: Script execution frequently stages or launches LOLBin execution chains.
+  - technique: T1574.001
+    tactic: persistence
+    name: DLL Search Order Hijacking
+    coverage: partial
+    rationale: Suspicious rundll32 execution can overlap with DLL side-loading or hijack tradecraft.
+  - technique: T1105
+    tactic: command-and-control
+    name: Ingress Tool Transfer
+    coverage: related
+    rationale: Retrieved DLL payloads may be executed through rundll32.
+data_sources:
+  - name: Sysmon Process Creation
+    kind: endpoint
+    provider: windows
+    event_names:
+      - Event ID 1
+    notes: Captures image path and suspicious command-line arguments.
+triage_steps:
+  - step: Confirm the DLL path, export name, parent process, and user context for the rundll32 execution.
+    priority: high
+    rationale: Quickly distinguishes signed software usage from attacker-controlled execution.
+investigation_steps:
+  - step: Review the referenced DLL on disk, its signature, origin path, and recent file creation events.
+    priority: high
+    rationale: Malicious or staged DLLs often sit in user-writable or temporary locations.
+  - step: Pivot to other LOLBin usage from the same host or parent process.
+    priority: medium
+    rationale: Rundll32 abuse often appears alongside other proxy execution behavior.
+escalation_guidance:
+  - Escalate if rundll32 loads unsigned DLLs from user-writable paths or internet download locations.
+hunt_suggestions:
+  - name: LOLBin proxy execution chain hunt
+    hypothesis: Hosts with suspicious rundll32 execution may also show mshta, regsvr32, or certutil activity.
+    query_hint: Hunt for LOLBins launched from Office, script interpreters, temp directories, or archive extraction paths.
+artifacts:
+  - name: Prefetch for rundll32
+    category: file
+    path: C:\Windows\Prefetch\RUNDLL32*.pf
+    notes: Useful for execution evidence and referenced DLL path artifacts.
+  - name: Amcache entries
+    category: file
+    path: C:\Windows\AppCompat\Programs\Amcache.hve
+    notes: Helps identify first-seen DLL execution and file metadata.
+velociraptor_artifacts:
+  - Windows.Forensics.Amcache
+  - Windows.System.Prefetch
+related_detections:
+  - detection_id: DET-0001
+    relationship: correlated
+    rationale: PowerShell frequently stages or launches suspicious rundll32 activity.
+  - detection_id: DET-0003
+    relationship: correlated
+    rationale: Adversaries often chain LOLBins for download and execution.
+response_actions:
+  - title: Contain the host if unsigned or user-writable DLL execution is confirmed.
+    priority: high
+    description: Prevent reuse of the DLL or linked persistence mechanisms.
 references:
   - https://attack.mitre.org/techniques/T1218/011/
 falsepositives:

@@ -7,28 +7,24 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from detlab.analytics import generate_analytics
-from detlab.packs import list_pack_reports
+from detlab.domain import (
+    build_detection_catalog,
+    build_detection_workspace,
+    export_domain_schema,
+    load_detections,
+)
+from detlab.markdown_ingest import validate_markdown_detection_dir
 from detlab.processing import (
     UnsupportedConversionTargetError,
     convert_detection_content,
     inspect_detection_content,
 )
 from detlab.scoring import generate_score_report
-from detlab.validators import load_detection_dir, load_detection_file
+from detlab.sources import describe_detection_source, resolve_detection_dir
+from detlab.validators import load_detection_dir
 
 ROOT_PATH = os.getenv("DETLAB_ROOT_PATH", "")
-PACK_ROOT = Path(os.getenv("DETLAB_PACK_ROOT", "examples/packs"))
 MAX_DETECTION_REQUEST_BYTES = 25_000
-
-TACTIC_PACK_MAP = {
-    "credential-access": "credential-access",
-    "privilege-escalation": "windows-core",
-    "lateral-movement": "windows-core",
-    "command-and-control": "powershell",
-    "exfiltration": "cloudtrail",
-    "initial-access": "windows-core",
-    "persistence": "persistence",
-}
 
 app = FastAPI(title="DetLab API", version="0.1.0", root_path=ROOT_PATH)
 
@@ -72,7 +68,7 @@ class DetectionConvertRequest(BaseModel):
 
 
 def _load_detections(path: str):
-    return [load_detection_file(file_path) for file_path in Path(path).rglob("*.y*ml")]
+    return load_detections(str(resolve_detection_dir(path)))
 
 
 
@@ -81,8 +77,8 @@ def _build_review_queue(analytics_data: dict, score_data: list[dict]) -> dict:
         {
             "tactic": tactic,
             "priority": "high",
-            "recommended_pack": TACTIC_PACK_MAP.get(tactic, "windows-core"),
-            "recommended_action": f"Add or expand detections covering the {tactic} ATT&CK tactic.",
+            "recommended_source_path": f"detections/{tactic}",
+            "recommended_action": f"Add or expand detections covering the {tactic} ATT&CK tactic in the GitHub-backed detection directory.",
         }
         for tactic in analytics_data.get("high_risk_gaps", [])
     ]
@@ -106,11 +102,16 @@ def _build_review_queue(analytics_data: dict, score_data: list[dict]) -> dict:
 
 
 def _build_dashboard_payload(path: str = "detections") -> dict:
-    files, valid, errors = load_detection_dir(Path(path))
-    detections = _load_detections(path)
+    resolved_path = resolve_detection_dir(path)
+    yaml_files, yaml_valid, yaml_errors = load_detection_dir(Path(resolved_path))
+    markdown_files, markdown_valid, markdown_errors = validate_markdown_detection_dir(resolved_path)
+    files = sorted({*yaml_files, *markdown_files})
+    valid = yaml_valid and markdown_valid
+    errors = {**yaml_errors, **markdown_errors}
+    detections = _load_detections(str(resolved_path))
     analytics_data = generate_analytics(detections)
     score_data = generate_score_report(detections)
-    pack_reports = list_pack_reports(PACK_ROOT)
+    source_status = describe_detection_source(path)
 
     return {
         "summary": {
@@ -121,9 +122,10 @@ def _build_dashboard_payload(path: str = "detections") -> dict:
                 1,
             ) if score_data else 0,
             "attack_techniques_covered": len(analytics_data.get("techniques", {})),
-            "packs_installed": len(pack_reports),
+            "source_mode": source_status["mode"],
             "validation_failures": len(errors),
         },
+        "source": source_status,
         "coverage": {
             "by_tactic": analytics_data.get("tactics", {}),
             "by_technique": analytics_data.get("techniques", {}),
@@ -133,7 +135,6 @@ def _build_dashboard_payload(path: str = "detections") -> dict:
             "high_risk_gaps": analytics_data.get("high_risk_gaps", []),
         },
         "scoring": score_data,
-        "packs": pack_reports,
         "review_queue": _build_review_queue(analytics_data, score_data),
         "reports": {
             "valid": valid,
@@ -154,10 +155,14 @@ def health():
 
 @app.get("/validate")
 def validate(path: str = "detections"):
-    files, valid, errors = load_detection_dir(Path(path))
+    resolved_path = resolve_detection_dir(path)
+    yaml_files, yaml_valid, yaml_errors = load_detection_dir(Path(resolved_path))
+    markdown_files, markdown_valid, markdown_errors = validate_markdown_detection_dir(resolved_path)
+    files = sorted({*yaml_files, *markdown_files})
+    errors = {**yaml_errors, **markdown_errors}
 
     return {
-        "valid": valid,
+        "valid": yaml_valid and markdown_valid,
         "files": [str(file) for file in files],
         "errors": {str(k): v for k, v in errors.items()},
     }
@@ -173,14 +178,32 @@ def score(path: str = "detections"):
     return generate_score_report(_load_detections(path))
 
 
-@app.get("/packs")
-def packs():
-    return list_pack_reports(PACK_ROOT)
+@app.get("/source")
+def source(path: str = "detections"):
+    return describe_detection_source(path)
 
 
 @app.get("/dashboard")
 def dashboard(path: str = "detections"):
     return _build_dashboard_payload(path)
+
+
+@app.get("/schema/domain")
+def domain_schema():
+    return export_domain_schema()
+
+
+@app.get("/detections/catalog")
+def detection_catalog(path: str = "detections"):
+    return build_detection_catalog(path)
+
+
+@app.get("/detections/{detection_id}/workspace")
+def detection_workspace(detection_id: str, path: str = "detections"):
+    workspace = build_detection_workspace(detection_id, path)
+    if workspace is None:
+        raise HTTPException(status_code=404, detail=f"Detection not found: {detection_id}")
+    return workspace
 
 
 @app.post("/detections/inspect")
