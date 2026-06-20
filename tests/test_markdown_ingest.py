@@ -141,3 +141,16 @@ def test_dashboard_endpoint_exposes_markdown_source_content(tmp_path: Path):
     assert body['source']['mode'] == 'local'
     assert any(item.endswith('encoded-powershell.md') for item in body['reports']['files'])
     assert body['scoring'][0]['title'] == 'Encoded PowerShell'
+
+
+
+def test_validate_endpoint_exposes_markdown_source_content(tmp_path: Path):
+    source_dir = _write_markdown_source(tmp_path)
+
+    response = client.get('/validate', params={'path': str(source_dir)})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body['valid'] is True
+    assert any(item.endswith('encoded-powershell.md') for item in body['files'])
+    assert body['errors'] == {}

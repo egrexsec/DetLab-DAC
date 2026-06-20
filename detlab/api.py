@@ -13,7 +13,7 @@ from detlab.domain import (
     export_domain_schema,
     load_detections,
 )
-from detlab.markdown_ingest import markdown_source_files
+from detlab.markdown_ingest import validate_markdown_detection_dir
 from detlab.processing import (
     UnsupportedConversionTargetError,
     convert_detection_content,
@@ -103,13 +103,11 @@ def _build_review_queue(analytics_data: dict, score_data: list[dict]) -> dict:
 
 def _build_dashboard_payload(path: str = "detections") -> dict:
     resolved_path = resolve_detection_dir(path)
-    yaml_files = list(Path(resolved_path).rglob("*.y*ml"))
-    if yaml_files:
-        files, valid, errors = load_detection_dir(Path(resolved_path))
-    else:
-        files = markdown_source_files(resolved_path)
-        valid = bool(files)
-        errors = {}
+    yaml_files, yaml_valid, yaml_errors = load_detection_dir(Path(resolved_path))
+    markdown_files, markdown_valid, markdown_errors = validate_markdown_detection_dir(resolved_path)
+    files = sorted({*yaml_files, *markdown_files})
+    valid = yaml_valid and markdown_valid
+    errors = {**yaml_errors, **markdown_errors}
     detections = _load_detections(str(resolved_path))
     analytics_data = generate_analytics(detections)
     score_data = generate_score_report(detections)
@@ -157,10 +155,14 @@ def health():
 
 @app.get("/validate")
 def validate(path: str = "detections"):
-    files, valid, errors = load_detection_dir(Path(path))
+    resolved_path = resolve_detection_dir(path)
+    yaml_files, yaml_valid, yaml_errors = load_detection_dir(Path(resolved_path))
+    markdown_files, markdown_valid, markdown_errors = validate_markdown_detection_dir(resolved_path)
+    files = sorted({*yaml_files, *markdown_files})
+    errors = {**yaml_errors, **markdown_errors}
 
     return {
-        "valid": valid,
+        "valid": yaml_valid and markdown_valid,
         "files": [str(file) for file in files],
         "errors": {str(k): v for k, v in errors.items()},
     }

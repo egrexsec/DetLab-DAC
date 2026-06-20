@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml
 
-from detlab.domain import build_detection_catalog, build_detection_workspace, export_domain_schema
+from detlab.domain import build_detection_catalog, build_detection_workspace, export_domain_schema, load_detections
 from detlab.models import Detection
 
 
@@ -141,9 +141,49 @@ RELATED_DETECTION = {
 }
 
 
+MARKDOWN_DETECTION = """---
+id: DET-9999
+name: Markdown Detection
+author: mell0wx
+status: validated
+severity: medium
+domain:
+  - endpoint
+platforms:
+  - windows
+logsource:
+  product: mde
+  service: advanced_hunting
+attack:
+  technique: T1059.001
+  tactic: execution
+tests:
+  - name: Analyst validation
+    source: markdown-curation
+    test_id: markdown-detection-v1
+---
+
+# Markdown Detection
+
+Markdown detection entry used for mixed-source loading coverage.
+
+## Query
+```kusto
+DeviceProcessEvents
+| where FileName =~ "powershell.exe"
+```
+"""
+
+
 def _write_detection(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+
+
+def _write_markdown_detection(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
 
 
 def test_detection_model_accepts_detection_first_fields():
@@ -176,6 +216,16 @@ def test_build_detection_catalog_returns_detection_first_fields(tmp_path):
     assert entry["domain"] == ["endpoint"]
     assert entry["related_detections_count"] == 1
     assert entry["investigation_readiness_score"] > 0
+
+
+
+def test_load_detections_combines_yaml_and_markdown_sources(tmp_path):
+    _write_detection(tmp_path / "windows" / "office_spawned_powershell.yml", SAMPLE_DETECTION)
+    _write_markdown_detection(tmp_path / "markdown" / "encoded-powershell.md", MARKDOWN_DETECTION)
+
+    detections = load_detections(str(tmp_path))
+
+    assert {detection.id for detection in detections} == {"DET-1234", "DET-9999"}
 
 
 def test_build_detection_workspace_returns_heat_map_and_relationship_graph(tmp_path):

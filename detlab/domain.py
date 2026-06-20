@@ -21,9 +21,8 @@ def load_detections(path: str = "detections") -> list[Detection]:
     detection_dir = resolve_detection_dir(path)
     yaml_files = sorted(Path(detection_dir).rglob("*.y*ml"))
     detections = [load_detection_file(file_path) for file_path in yaml_files]
-    if detections:
-        return detections
-    return load_markdown_detections(detection_dir)
+    detections.extend(load_markdown_detections(detection_dir))
+    return detections
 
 
 def export_domain_schema() -> dict[str, Any]:

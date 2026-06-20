@@ -9,8 +9,10 @@ from rich.table import Table
 from detlab.analytics import generate_json_analytics, generate_markdown_analytics
 from detlab.attck import build_technique_map
 from detlab.dashboard import generate_dashboard
+from detlab.domain import load_detections
 from detlab.eql import export_eql_detection, export_eql_directory
 from detlab.kql import export_kql_detection, export_kql_directory
+from detlab.markdown_ingest import validate_markdown_detection_dir
 from detlab.navigator import generate_navigator_layer
 from detlab.reporting import generate_json_report, generate_markdown_report, write_report
 from detlab.scoring import generate_json_score_report, generate_markdown_score_report
@@ -46,11 +48,21 @@ def main(
 
 
 def _load_valid_detections(path: Path):
+    try:
+        return load_detections(str(path))
+    except Exception as exc:
+        console.print(f"[red]Failed to load detections:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+
+
+def _validate_detection_source(path: Path) -> tuple[list[Path], bool, dict[Path, str]]:
     resolved_path = resolve_detection_dir(path)
-    _, valid, _ = load_detection_dir(resolved_path)
-    if not valid:
-        raise typer.Exit(code=1)
-    return [load_detection_file(p) for p in resolved_path.rglob("*.y*ml")]
+    yaml_files, yaml_valid, yaml_errors = load_detection_dir(resolved_path)
+    markdown_files, markdown_valid, markdown_errors = validate_markdown_detection_dir(resolved_path)
+    files = sorted({*yaml_files, *markdown_files})
+    errors = {**yaml_errors, **markdown_errors}
+    return files, yaml_valid and markdown_valid, errors
 
 
 
@@ -94,7 +106,7 @@ def analytics(
 
 @app.command()
 def validate(path: Path = typer.Argument(Path("detections"))) -> None:
-    files, valid, errors = load_detection_dir(path)
+    files, valid, errors = _validate_detection_source(path)
 
     table = Table(title="Validation Results")
     table.add_column("File")

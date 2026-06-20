@@ -87,6 +87,32 @@ def markdown_source_files(path: str | Path) -> list[Path]:
 
 
 
+def validate_markdown_detection_dir(path: str | Path) -> tuple[list[Path], bool, dict[Path, str]]:
+    root = Path(path)
+    source = source_from_environment()
+    used_ids: set[str] = set()
+    files: list[Path] = []
+    errors: dict[Path, str] = {}
+
+    for file_path in markdown_source_files(root):
+        raw_text = file_path.read_text(encoding="utf-8")
+        frontmatter, body = _split_frontmatter(raw_text)
+        sections = _extract_sections(body)
+        _, query_text = _extract_query_block(sections)
+        if _should_skip_markdown_file(file_path, frontmatter, sections, query_text):
+            continue
+        files.append(file_path)
+        try:
+            detection = _markdown_file_to_detection(file_path, root, source, used_ids)
+            if detection is None:
+                errors[file_path] = "Markdown entry was skipped during ingestion."
+        except Exception as exc:
+            errors[file_path] = str(exc)
+
+    return files, len(errors) == 0, errors
+
+
+
 def _markdown_file_to_detection(
     file_path: Path,
     root: Path,
