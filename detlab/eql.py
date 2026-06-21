@@ -55,7 +55,11 @@ def export_eql_detection(detection: Detection) -> str:
     metadata = [
         f'// Detection ID: {detection.id}',
         f'// Title: {detection.title}',
+        f'// Description: {detection.description}',
         f'// ATT&CK: {detection.attack.technique}',
+        f'// Tactic: {detection.attack.tactic}',
+        f'// Product: {detection.logsource.product}',
+        f'// Service: {detection.logsource.service}',
         f'// Severity: {detection.severity}',
         f'// Status: {detection.status}',
         f'// Author: {detection.author}',

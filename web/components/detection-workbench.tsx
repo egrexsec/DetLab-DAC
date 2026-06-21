@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 type ValidationErrorRow = {
   loc: Array<string | number>
@@ -11,6 +11,9 @@ type ValidationErrorRow = {
 type InspectResponse = {
   valid: boolean
   errors: ValidationErrorRow[]
+  source_format?: string
+  normalized_from?: string
+  canonical_model_version?: string
   detection?: {
     id: string
     title: string
@@ -42,6 +45,19 @@ type InspectResponse = {
 type ConvertResponse = InspectResponse & {
   target?: string
   content?: string
+}
+
+type DetectionTemplateCatalog = {
+  canonical_model_version: string
+  default_format: string
+  templates: Record<
+    string,
+    {
+      label: string
+      description: string
+      content: string
+    }
+  >
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api'
@@ -111,6 +127,8 @@ const cardStyle = {
 export default function DetectionWorkbench() {
   const [content, setContent] = useState(SAMPLE_DETECTION_YAML)
   const [target, setTarget] = useState('splunk')
+  const [templateCatalog, setTemplateCatalog] = useState<DetectionTemplateCatalog | null>(null)
+  const [templateFormat, setTemplateFormat] = useState('yaml')
   const [inspectResult, setInspectResult] = useState<InspectResponse | null>(null)
   const [convertResult, setConvertResult] = useState<ConvertResponse | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -118,6 +136,42 @@ export default function DetectionWorkbench() {
   const [converting, setConverting] = useState(false)
 
   const recommendations = useMemo(() => inspectResult?.score?.recommendations ?? [], [inspectResult])
+
+  useEffect(() => {
+    async function loadTemplates() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/detections/templates`)
+        if (!response.ok) {
+          throw new Error(`template request failed: ${response.status}`)
+        }
+        const body: DetectionTemplateCatalog = await response.json()
+        setTemplateCatalog(body)
+        setTemplateFormat(body.default_format)
+      } catch {
+        setTemplateCatalog(null)
+      }
+    }
+
+    loadTemplates()
+  }, [])
+
+  function loadTemplate(format: string) {
+    const template = templateCatalog?.templates[format]
+    if (template?.content) {
+      setContent(template.content)
+      setInspectResult(null)
+      setConvertResult(null)
+      setErrorMessage(null)
+      return
+    }
+
+    if (format === 'yaml') {
+      setContent(SAMPLE_DETECTION_YAML)
+      setInspectResult(null)
+      setConvertResult(null)
+      setErrorMessage(null)
+    }
+  }
 
   async function inspectDetection() {
     setInspecting(true)
@@ -176,12 +230,23 @@ export default function DetectionWorkbench() {
               Draft a detection in YAML, inspect validation and scoring results, then optionally preview a backend conversion.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <select
+              value={templateFormat}
+              onChange={(event) => setTemplateFormat(event.target.value)}
+              style={{ background: '#111827', color: '#e2e8f0', border: '1px solid #334155', borderRadius: '10px', padding: '10px 12px' }}
+            >
+              {Object.entries(templateCatalog?.templates ?? { yaml: { label: 'Canonical YAML', description: '', content: SAMPLE_DETECTION_YAML } }).map(([format, template]) => (
+                <option key={format} value={format}>
+                  {template.label}
+                </option>
+              ))}
+            </select>
             <button
-              onClick={() => setContent(SAMPLE_DETECTION_YAML)}
+              onClick={() => loadTemplate(templateFormat)}
               style={{ background: '#111827', color: '#e2e8f0', border: '1px solid #334155', borderRadius: '10px', padding: '10px 14px', cursor: 'pointer' }}
             >
-              Load sample
+              Load template
             </button>
             <button
               onClick={inspectDetection}
@@ -229,6 +294,9 @@ export default function DetectionWorkbench() {
                 <Stat label="Status" value={inspectResult.detection.status} />
                 <Stat label="ATT&CK Technique" value={inspectResult.detection.attack.technique} />
                 <Stat label="ATT&CK Tactic" value={inspectResult.detection.attack.tactic} />
+                <Stat label="Source Format" value={inspectResult.source_format ?? 'unknown'} />
+                <Stat label="Normalized From" value={inspectResult.normalized_from ?? 'unknown'} />
+                <Stat label="Canonical Model" value={inspectResult.canonical_model_version ?? 'unknown'} />
               </div>
               <div>
                 <div style={{ color: '#94a3b8', fontSize: '0.86rem' }}>Title</div>
@@ -306,21 +374,28 @@ export default function DetectionWorkbench() {
           <div style={{ marginTop: '16px' }}>
             <div style={{ color: '#94a3b8', fontSize: '0.86rem', marginBottom: '8px' }}>Conversion Preview</div>
             {convertResult?.valid && convertResult.content ? (
-              <pre
-                style={{
-                  margin: 0,
-                  padding: '16px',
-                  background: '#020617',
-                  border: '1px solid #334155',
-                  borderRadius: '14px',
-                  overflowX: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  color: '#e2e8f0',
-                }}
-              >
-                {convertResult.content}
-              </pre>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
+                  <Stat label="Source Format" value={convertResult.source_format ?? 'unknown'} />
+                  <Stat label="Normalized From" value={convertResult.normalized_from ?? 'unknown'} />
+                  <Stat label="Canonical Model" value={convertResult.canonical_model_version ?? 'unknown'} />
+                </div>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: '16px',
+                    background: '#020617',
+                    border: '1px solid #334155',
+                    borderRadius: '14px',
+                    overflowX: 'auto',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    color: '#e2e8f0',
+                  }}
+                >
+                  {convertResult.content}
+                </pre>
+              </div>
             ) : convertResult?.errors?.length ? (
               <ul style={{ marginBottom: 0 }}>
                 {convertResult.errors.map((error, index) => (

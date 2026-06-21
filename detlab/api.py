@@ -21,6 +21,7 @@ from detlab.processing import (
 )
 from detlab.scoring import generate_score_report
 from detlab.sources import describe_detection_source, resolve_detection_dir
+from detlab.templates import build_detection_templates
 from detlab.validators import load_detection_dir
 
 ROOT_PATH = os.getenv("DETLAB_ROOT_PATH", "")
@@ -196,6 +197,11 @@ def domain_schema():
 @app.get("/detections/catalog")
 def detection_catalog(path: str = "detections"):
     return build_detection_catalog(path)
+
+
+@app.get("/detections/templates")
+def detection_templates():
+    return build_detection_templates()
 
 
 @app.get("/detections/{detection_id}/workspace")

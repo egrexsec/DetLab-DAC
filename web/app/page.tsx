@@ -124,6 +124,9 @@ type InvestigationStep = {
 
 type DetectionWorkspace = {
   schema_version: string
+  source_format: string
+  normalized_from: string
+  canonical_model_version: string
   detection: {
     id: string
     name: string
@@ -247,6 +250,12 @@ type DetectionWorkspace = {
     edges: Array<{ source: string; target: string; relationship: string; rationale?: string | null }>
   }
   knowledge_gaps: string[]
+  conversions: {
+    sigma: string
+    splunk: string
+    kql: string
+    eql: string
+  }
 }
 
 type HeatMapEntry = {
@@ -587,7 +596,7 @@ export default function HomePage() {
                       <StatCard label="Purpose" value="Detection triage anchor" />
                       <StatCard label="Data Sources" value={String(workspace.overview.data_sources.length)} />
                       <StatCard label="Related Detections" value={String(workspace.related_detections.length)} />
-                      <StatCard label="Knowledge Gaps" value={String(workspace.knowledge_gaps.length)} />
+                      <StatCard label="Source Format" value={workspace.source_format} />
                     </div>
                   </div>
 
@@ -603,45 +612,79 @@ export default function HomePage() {
                         label="Content Source"
                         value={`${workspace.overview.content_source.kind ?? 'knowledge'}${workspace.overview.content_source.path ? ` · ${workspace.overview.content_source.path}` : ''}`}
                       />
+                      <OverviewBlock label="Normalized From" value={workspace.normalized_from} />
+                      <OverviewBlock label="Canonical Model Version" value={workspace.canonical_model_version} />
                       <OverviewList label="Data Sources" items={workspace.overview.data_sources.map((item) => `${item.name}${item.notes ? ` — ${item.notes}` : ''}`)} />
                       <OverviewList label="References" items={workspace.overview.references} />
                     </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div style={cardStyle}>
+                        <h3 style={{ marginTop: 0 }}>Detection Logic & Query</h3>
+                        {workspace.overview.query.text ? (
+                          <>
+                            <OverviewBlock label="Query Language" value={workspace.overview.query.language ?? 'plain text'} />
+                            <pre
+                              style={{
+                                margin: '0 0 16px 0',
+                                padding: '16px',
+                                background: '#020617',
+                                border: '1px solid #334155',
+                                borderRadius: '14px',
+                                overflowX: 'auto',
+                                whiteSpace: 'pre-wrap',
+                                color: '#e2e8f0',
+                              }}
+                            >
+                              {workspace.overview.query.text}
+                            </pre>
+                          </>
+                        ) : null}
+                        <pre
+                          style={{
+                            margin: 0,
+                            padding: '16px',
+                            background: '#020617',
+                            border: '1px solid #334155',
+                            borderRadius: '14px',
+                            overflowX: 'auto',
+                            whiteSpace: 'pre-wrap',
+                            color: '#e2e8f0',
+                          }}
+                        >
+                          {JSON.stringify(workspace.overview.detection_logic, null, 2)}
+                        </pre>
+                      </div>
 
-                    <div style={cardStyle}>
-                      <h3 style={{ marginTop: 0 }}>Detection Logic & Query</h3>
-                      {workspace.overview.query.text ? (
-                        <>
-                          <OverviewBlock label="Query Language" value={workspace.overview.query.language ?? 'plain text'} />
-                          <pre
-                            style={{
-                              margin: '0 0 16px 0',
-                              padding: '16px',
-                              background: '#020617',
-                              border: '1px solid #334155',
-                              borderRadius: '14px',
-                              overflowX: 'auto',
-                              whiteSpace: 'pre-wrap',
-                              color: '#e2e8f0',
-                            }}
-                          >
-                            {workspace.overview.query.text}
-                          </pre>
-                        </>
-                      ) : null}
-                      <pre
-                        style={{
-                          margin: 0,
-                          padding: '16px',
-                          background: '#020617',
-                          border: '1px solid #334155',
-                          borderRadius: '14px',
-                          overflowX: 'auto',
-                          whiteSpace: 'pre-wrap',
-                          color: '#e2e8f0',
-                        }}
-                      >
-                        {JSON.stringify(workspace.overview.detection_logic, null, 2)}
-                      </pre>
+                      <div style={cardStyle}>
+                        <h3 style={{ marginTop: 0 }}>Generated Conversions</h3>
+                        <p style={{ color: '#94a3b8', marginTop: 0 }}>
+                          Canonical detection content can be reviewed as generated Sigma, Splunk, KQL, and EQL without leaving the workspace.
+                        </p>
+                        <div style={{ display: 'grid', gap: '12px' }}>
+                          {Object.entries(workspace.conversions).map(([label, content]) => (
+                            <div key={label}>
+                              <div style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+                                {label}
+                              </div>
+                              <pre
+                                style={{
+                                  margin: 0,
+                                  padding: '16px',
+                                  background: '#020617',
+                                  border: '1px solid #334155',
+                                  borderRadius: '14px',
+                                  overflowX: 'auto',
+                                  whiteSpace: 'pre-wrap',
+                                  color: '#e2e8f0',
+                                  maxHeight: '220px',
+                                }}
+                              >
+                                {content}
+                              </pre>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
 

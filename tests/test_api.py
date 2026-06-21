@@ -1,8 +1,11 @@
 import importlib
 
+import yaml
 from fastapi.testclient import TestClient
 
 from detlab import api as api_module
+from detlab.kql import export_kql_detection
+from detlab.models import Detection
 
 client = TestClient(api_module.app)
 
@@ -35,6 +38,8 @@ detection:
       - '-encodedcommand'
   condition: selection
 """
+
+SAMPLE_DETECTION_KQL = export_kql_detection(Detection.model_validate(yaml.safe_load(SAMPLE_DETECTION_YAML)))
 
 
 def test_health_endpoint():
@@ -101,6 +106,9 @@ def test_detection_workspace_endpoint_returns_visual_investigation_payload():
     assert 'heat_map' in body
     assert 'relationship_graph' in body
     assert body['heat_map']['direct'][0]['technique'] == 'T1059.001'
+    assert body['source_format'] == 'yaml'
+    assert body['normalized_from'] == 'canonical_yaml'
+    assert body['canonical_model_version']
 
 
 
@@ -154,6 +162,40 @@ def test_convert_detection_endpoint_returns_backend_specific_content():
     assert body['target'] == 'splunk'
     assert 'search' in body['content']
     assert body['valid'] is True
+
+
+
+def test_convert_detection_endpoint_supports_kql_authored_input():
+    response = client.post(
+        '/detections/convert',
+        json={'content': SAMPLE_DETECTION_KQL, 'target': 'sigma'},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body['target'] == 'sigma'
+    assert body['valid'] is True
+    assert 'title: Suspicious Encoded PowerShell' in body['content']
+    assert body['source_format'] == 'kql'
+    assert body['normalized_from'] == 'kql_export'
+    assert body['canonical_model_version']
+
+
+
+def test_detection_templates_endpoint_returns_generic_authoring_templates():
+    response = client.get('/detections/templates')
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body['default_format'] == 'yaml'
+    assert body['canonical_model_version']
+    assert 'yaml' in body['templates']
+    assert 'markdown' in body['templates']
+    assert 'sigma' in body['templates']
+    assert 'splunk' in body['templates']
+    assert 'kql' in body['templates']
+    assert 'eql' in body['templates']
+    assert 'Detects suspicious PowerShell' in body['templates']['yaml']['content']
 
 
 

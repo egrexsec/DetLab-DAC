@@ -1,7 +1,12 @@
 from pathlib import Path
 from typing import Any
 
+from detlab.contracts import CANONICAL_MODEL_VERSION
+from detlab.eql import export_eql_detection
+from detlab.kql import export_kql_detection
 from detlab.markdown_ingest import load_markdown_detections
+from detlab.sigma_export import export_sigma_detection
+from detlab.splunk import export_splunk_detection
 from detlab.models import (
     ArtifactReference,
     AttackContext,
@@ -20,14 +25,49 @@ from detlab.validators import load_detection_file
 def load_detections(path: str = "detections") -> list[Detection]:
     detection_dir = resolve_detection_dir(path)
     yaml_files = sorted(Path(detection_dir).rglob("*.y*ml"))
-    detections = [load_detection_file(file_path) for file_path in yaml_files]
+    detections = []
+    for file_path in yaml_files:
+        detection = load_detection_file(file_path)
+        relative_path = str(file_path.relative_to(detection_dir))
+        detection.detection.selection.setdefault("SourcePath", relative_path)
+        detection.detection.selection.setdefault("SourceFormat", "yaml")
+        detection.detection.selection.setdefault("NormalizedFrom", "canonical_yaml")
+        detections.append(detection)
     detections.extend(load_markdown_detections(detection_dir))
     return detections
 
 
+
+def _render_conversions(detection: Detection) -> dict[str, str]:
+    renderable = detection.model_copy(deep=True)
+    renderable.detection.selection.pop("SourcePath", None)
+    renderable.detection.selection.pop("SourceFormat", None)
+    renderable.detection.selection.pop("NormalizedFrom", None)
+    return {
+        "sigma": export_sigma_detection(renderable),
+        "splunk": export_splunk_detection(renderable),
+        "kql": export_kql_detection(renderable),
+        "eql": export_eql_detection(renderable),
+    }
+
+
+
+def _workspace_normalization_metadata(detection: Detection) -> dict[str, str]:
+    selection = detection.detection.selection
+    source_path = str(selection.get("SourcePath") or "")
+    source_format = str(selection.get("SourceFormat") or ("markdown" if source_path.endswith(".md") else "yaml"))
+    normalized_from = str(selection.get("NormalizedFrom") or ("markdown_frontmatter" if source_format == "markdown" else "canonical_yaml"))
+    return {
+        "source_format": source_format,
+        "normalized_from": normalized_from,
+        "canonical_model_version": CANONICAL_MODEL_VERSION,
+    }
+
+
+
 def export_domain_schema() -> dict[str, Any]:
     return {
-        "schema_version": "2026-06-19",
+        "schema_version": CANONICAL_MODEL_VERSION,
         "primary_entity": "Detection",
         "entities": {
             "Detection": Detection.model_json_schema(),
@@ -243,7 +283,7 @@ def build_detection_catalog(path: str = "detections") -> dict[str, Any]:
         )
 
     return {
-        "schema_version": "2026-06-19",
+        "schema_version": CANONICAL_MODEL_VERSION,
         "total": len(entries),
         "detections": sorted(entries, key=lambda item: (item["name"], item["id"])),
     }
@@ -258,9 +298,13 @@ def build_detection_workspace(detection_id: str, path: str = "detections") -> di
 
     attack_map = _attack_map(detection)
     related = _relationship_entries(detection, detections)
+    metadata = _workspace_normalization_metadata(detection)
 
     return {
-        "schema_version": "2026-06-19",
+        "schema_version": CANONICAL_MODEL_VERSION,
+        "source_format": metadata["source_format"],
+        "normalized_from": metadata["normalized_from"],
+        "canonical_model_version": metadata["canonical_model_version"],
         "detection": {
             "id": detection.id,
             "name": detection.name or detection.title,
@@ -314,4 +358,5 @@ def build_detection_workspace(detection_id: str, path: str = "detections") -> di
         "heat_map": attack_map,
         "relationship_graph": _relationship_graph(detection, detections),
         "knowledge_gaps": _knowledge_gaps(detection),
+        "conversions": _render_conversions(detection),
     }

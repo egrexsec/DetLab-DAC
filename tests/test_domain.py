@@ -240,3 +240,24 @@ def test_build_detection_workspace_returns_heat_map_and_relationship_graph(tmp_p
     assert workspace["heat_map"]["direct"][0]["technique"] == "T1059.001"
     assert workspace["threat_hunting"]["related_detections"][0]["detection_id"] == "DET-5678"
     assert workspace["relationship_graph"]["edges"][0]["target"] == "DET-5678"
+    assert workspace["conversions"]["sigma"]
+    assert workspace["conversions"]["splunk"]
+    assert workspace["conversions"]["kql"]
+    assert workspace["conversions"]["eql"]
+    assert workspace["source_format"] == "yaml"
+    assert workspace["normalized_from"] == "canonical_yaml"
+    assert workspace["canonical_model_version"]
+
+
+
+def test_build_detection_workspace_includes_conversions_for_markdown_authored_detections(tmp_path):
+    _write_markdown_detection(tmp_path / "markdown" / "encoded-powershell.md", MARKDOWN_DETECTION)
+
+    workspace = build_detection_workspace("DET-9999", str(tmp_path))
+
+    assert workspace is not None
+    assert workspace["detection"]["id"] == "DET-9999"
+    assert "QueryLanguage" in workspace["conversions"]["splunk"]
+    assert "selection:" in workspace["conversions"]["sigma"]
+    assert workspace["source_format"] == "markdown"
+    assert workspace["normalized_from"] == "markdown_frontmatter"

@@ -120,9 +120,32 @@ def _markdown_file_to_detection(
     used_ids: set[str],
 ) -> Detection | None:
     raw_text = file_path.read_text(encoding="utf-8")
+    relative_path = file_path.relative_to(root).as_posix()
+    return _markdown_text_to_detection(raw_text, file_path, relative_path, source, used_ids)
+
+
+
+def parse_markdown_detection_content(
+    content: str,
+    *,
+    relative_path: str = "inline.md",
+    source: DetectionSource | None = None,
+    used_ids: set[str] | None = None,
+) -> Detection | None:
+    pseudo_path = Path(relative_path)
+    return _markdown_text_to_detection(content, pseudo_path, relative_path, source, used_ids or set())
+
+
+
+def _markdown_text_to_detection(
+    raw_text: str,
+    file_path: Path,
+    relative_path: str,
+    source: DetectionSource | None,
+    used_ids: set[str],
+) -> Detection | None:
     frontmatter, body = _split_frontmatter(raw_text)
     sections = _extract_sections(body)
-    relative_path = file_path.relative_to(root).as_posix()
     query_language, query_text = _extract_query_block(sections)
     if _should_skip_markdown_file(file_path, frontmatter, sections, query_text):
         return None
@@ -729,6 +752,8 @@ def _build_selection(relative_path: str, query_text: str | None, query_language:
     selection = {
         "SourcePath": relative_path,
         "ContentKind": content_kind,
+        "SourceFormat": "markdown",
+        "NormalizedFrom": "markdown_frontmatter",
     }
     if query_language:
         selection["QueryLanguage"] = query_language
