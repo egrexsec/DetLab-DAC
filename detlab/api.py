@@ -80,6 +80,13 @@ class RepoCommitRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=200)
 
 
+class RepoContentResponse(BaseModel):
+    path: str
+    content: str
+    content_kind: str
+    name: str
+
+
 def _load_detections(path: str):
     return load_detections(str(resolve_detection_dir(path)))
 
@@ -130,6 +137,22 @@ def _save_repo_content(relative_path: str, content: str) -> dict:
         'canonical_model_version': inspection.get('canonical_model_version'),
         'detection': inspection.get('detection'),
         'score': inspection.get('score'),
+    }
+
+
+def _read_repo_content(relative_path: str) -> dict:
+    normalized_path, resolved_path = _resolve_repo_save_path(relative_path)
+    if not resolved_path.exists() or not resolved_path.is_file():
+        raise HTTPException(status_code=404, detail=f'Repo content not found: {normalized_path}')
+
+    content = resolved_path.read_text(encoding='utf-8')
+    inspection = inspect_detection_content(content)
+    detection = inspection.get('detection') or {}
+    return {
+        'path': normalized_path,
+        'content': content,
+        'content_kind': str(detection.get('content_kind') or detection.get('detection', {}).get('selection', {}).get('ContentKind') or 'investigation'),
+        'name': str(detection.get('name') or detection.get('title') or resolved_path.stem),
     }
 
 
@@ -468,6 +491,11 @@ def save_detection(request: DetectionSaveRequest):
 @app.get('/repo/status')
 def repo_status():
     return _build_repo_status()
+
+
+@app.get('/repo/content')
+def repo_content(path: str):
+    return _read_repo_content(path)
 
 
 @app.get('/repo/diff')

@@ -36,6 +36,39 @@ export function getContentIndexNavigation() {
   }))
 }
 
+export function normalizeWorkbenchEditPath(item) {
+  const trimmedPath = String(item?.path || '').replace(/^\/+/, '')
+  if (!trimmedPath) {
+    return 'knowledge/'
+  }
+  if (trimmedPath.startsWith('knowledge/') || trimmedPath.startsWith('detections/')) {
+    return trimmedPath
+  }
+  return `knowledge/${trimmedPath}`
+}
+
+export function inferWorkbenchTab(item) {
+  const kind = String(item?.content_kind || '').toLowerCase()
+  if (kind === 'hunt') {
+    return 'hunt'
+  }
+  if (kind === 'learning_path' || kind === 'lab') {
+    return 'learning'
+  }
+  if (kind === 'detection') {
+    return 'detection'
+  }
+  return 'investigation'
+}
+
+export function buildWorkbenchEditHref(item) {
+  const params = new URLSearchParams({
+    edit: normalizeWorkbenchEditPath(item),
+    tab: inferWorkbenchTab(item),
+  })
+  return `/?${params.toString()}#workbench`
+}
+
 export function buildContentIndexCards(payload) {
   return CONTENT_INDEX_DEFINITIONS.map((entry) => ({
     ...entry,

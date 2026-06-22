@@ -145,6 +145,27 @@ def test_repo_diff_endpoint_returns_unified_diff_for_saved_file(tmp_path, monkey
     assert '--- a/knowledge/threat-hunts/hunt.md' in body['diff']
 
 
+def test_repo_content_endpoint_returns_saved_artifact_for_editing(tmp_path, monkeypatch):
+    repo_root = tmp_path / 'repo'
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+
+    artifact_path = repo_root / 'knowledge' / 'threat-hunts' / 'aws' / 'rare-iam-user-hunt.md'
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(HUNT_MARKDOWN, encoding='utf-8')
+
+    monkeypatch.setattr(api_module, 'REPO_ROOT', repo_root)
+
+    response = client.get('/repo/content', params={'path': 'knowledge/threat-hunts/aws/rare-iam-user-hunt.md'})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body['path'] == 'knowledge/threat-hunts/aws/rare-iam-user-hunt.md'
+    assert body['content'] == HUNT_MARKDOWN
+    assert body['content_kind'] == 'hunt'
+    assert body['name'] == 'Rare IAM User Hunt'
+
+
 def test_repo_commit_endpoint_creates_commit_and_returns_metadata(tmp_path, monkeypatch):
     repo_root = tmp_path / 'repo'
     repo_root.mkdir()

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getRepoActionDefinitions, summarizeRepoStatus } from '../config/repo-workflow.mjs'
 
+type WorkbenchTabId = 'detection' | 'investigation' | 'hunt' | 'learning'
+
 type ValidationErrorRow = {
   loc: Array<string | number>
   msg: string
@@ -77,6 +79,13 @@ type RepoCommitResponse = {
     path: string
     status: string
   }>
+}
+
+type RepoContentResponse = {
+  path: string
+  content: string
+  content_kind: string
+  name: string
 }
 
 type DetectionTemplateCatalog = {
@@ -212,6 +221,26 @@ const DEFAULT_SAVE_PATHS: Record<(typeof AUTHORING_TABS)[number]['id'], string> 
   learning: 'knowledge/learning-paths/new-learning-path.md',
 }
 
+function isWorkbenchTabId(value: string | null): value is WorkbenchTabId {
+  return value === 'detection' || value === 'investigation' || value === 'hunt' || value === 'learning'
+}
+
+function inferWorkbenchTabFromContent(path: string, contentKind: string): WorkbenchTabId {
+  const normalizedPath = String(path || '').toLowerCase()
+  const normalizedKind = String(contentKind || '').toLowerCase()
+
+  if (normalizedKind === 'hunt' || normalizedPath.includes('threat-hunts/')) {
+    return 'hunt'
+  }
+  if (normalizedKind === 'learning_path' || normalizedKind === 'lab' || normalizedPath.includes('learning-paths/') || normalizedPath.includes('labs/')) {
+    return 'learning'
+  }
+  if (normalizedKind === 'detection' || normalizedPath.startsWith('detections/')) {
+    return 'detection'
+  }
+  return 'investigation'
+}
+
 export default function DetectionWorkbench() {
   const [content, setContent] = useState(SAMPLE_DETECTION_YAML)
   const [target, setTarget] = useState('splunk')
@@ -226,6 +255,9 @@ export default function DetectionWorkbench() {
   const [repoDiff, setRepoDiff] = useState<RepoDiffResponse | null>(null)
   const [commitResult, setCommitResult] = useState<RepoCommitResponse | null>(null)
   const [commitMessage, setCommitMessage] = useState('')
+  const [editingPath, setEditingPath] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState<string | null>(null)
+  const [loadingEditContent, setLoadingEditContent] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [inspecting, setInspecting] = useState(false)
   const [converting, setConverting] = useState(false)
@@ -272,10 +304,12 @@ export default function DetectionWorkbench() {
   }, [availableTemplates, templateFormat])
 
   useEffect(() => {
-    setSavePath(DEFAULT_SAVE_PATHS[activeTab])
+    if (!editingPath) {
+      setSavePath(DEFAULT_SAVE_PATHS[activeTab])
+    }
     setSaveResult(null)
     setErrorMessage(null)
-  }, [activeTab])
+  }, [activeTab, editingPath])
 
   async function loadRepoStatus() {
     setLoadingRepoStatus(true)
@@ -295,6 +329,52 @@ export default function DetectionWorkbench() {
 
   useEffect(() => {
     loadRepoStatus()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const params = new URLSearchParams(window.location.search)
+    const editPath = params.get('edit')
+    if (!editPath) {
+      return
+    }
+
+    async function loadEditableContent() {
+      setLoadingEditContent(true)
+      setErrorMessage(null)
+      try {
+        const requestedTab = params.get('tab')
+        const response = await fetch(`${API_BASE_URL}/repo/content?path=${encodeURIComponent(editPath)}`)
+        const body: RepoContentResponse | { detail?: string } = await response.json()
+        if (!response.ok) {
+          throw new Error('detail' in body && body.detail ? body.detail : `repo content request failed: ${response.status}`)
+        }
+
+        const repoContent = body as RepoContentResponse
+        const inferredTab = isWorkbenchTabId(requestedTab) ? requestedTab : inferWorkbenchTabFromContent(repoContent.path, repoContent.content_kind)
+        setActiveTab(inferredTab)
+        setEditingPath(repoContent.path)
+        setEditingName(repoContent.name)
+        setSavePath(repoContent.path)
+        setContent(repoContent.content)
+        setInspectResult(null)
+        setConvertResult(null)
+        setSaveResult(null)
+        setCommitResult(null)
+        setCommitMessage(`Update ${repoContent.path}`)
+      } catch (error) {
+        setEditingPath(null)
+        setEditingName(null)
+        setErrorMessage(error instanceof Error ? error.message : 'The edit request failed. Check the API service and retry.')
+      } finally {
+        setLoadingEditContent(false)
+      }
+    }
+
+    loadEditableContent()
   }, [])
 
   function loadTemplate(format: string) {
@@ -483,6 +563,16 @@ export default function DetectionWorkbench() {
           <div>
             <h3 style={{ margin: 0 }}>{activeAuthoringTab.title}</h3>
             <p style={{ color: '#94a3b8', marginBottom: 0 }}>{activeAuthoringTab.description}</p>
+            {loadingEditContent ? (
+              <p style={{ color: '#cbd5e1', marginTop: '10px', marginBottom: 0 }}>Loading repo content into the workbench…</p>
+            ) : null}
+            {editingPath ? (
+              <div style={{ marginTop: '10px', display: 'grid', gap: '4px' }}>
+                <div style={{ color: '#38bdf8', fontSize: '0.82rem', fontWeight: 700 }}>Editing existing artifact</div>
+                <div style={{ color: '#e2e8f0' }}>{editingName ?? editingPath}</div>
+                <div style={{ color: '#94a3b8', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: '0.85rem' }}>{editingPath}</div>
+              </div>
+            ) : null}
           </div>
           <div style={{ background: '#111827', border: '1px solid #334155', borderRadius: '14px', padding: '14px' }}>
             <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Suggested repo path</div>

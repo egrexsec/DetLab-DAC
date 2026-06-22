@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { buildContentIndexCards, getContentIndexDefinition, getContentIndexNavigation } from '../config/content-indexes.mjs'
+import { buildContentIndexCards, buildWorkbenchEditHref, getContentIndexDefinition, getContentIndexNavigation } from '../config/content-indexes.mjs'
 
 type ContentItem = {
   id: string
@@ -146,6 +146,14 @@ export default function ContentIndexPage({ slug }: { slug: string }) {
                       </div>
                       <div style={{ marginTop: '12px', color: '#cbd5e1', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: '0.88rem' }}>
                         {item.path}
+                      </div>
+                      <div style={{ marginTop: '14px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <Link
+                          href={buildWorkbenchEditHref(item)}
+                          style={{ background: '#1d4ed8', color: '#dbeafe', border: '1px solid #2563eb', borderRadius: '10px', padding: '9px 12px', textDecoration: 'none', fontWeight: 700, fontSize: '0.88rem' }}
+                        >
+                          Edit in workbench
+                        </Link>
                       </div>
                     </article>
                   ))}

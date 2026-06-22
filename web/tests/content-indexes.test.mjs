@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   CONTENT_INDEX_DEFINITIONS,
   buildContentIndexCards,
+  buildWorkbenchEditHref,
   getContentIndexNavigation,
 } from '../config/content-indexes.mjs'
 
@@ -54,4 +55,15 @@ test('buildContentIndexCards maps API payload into route cards', () => {
   assert.equal(cards[1].items[0].content_kind, 'investigation')
   assert.equal(cards[2].emptyState.includes('No forensic'), true)
   assert.equal(cards[3].items[0].path, 'learning-paths/aws/iam-foundations.md')
+})
+
+test('buildWorkbenchEditHref deep-links indexed content into the workbench editor', () => {
+  assert.equal(
+    buildWorkbenchEditHref({ path: 'threat-hunts/aws/rare-iam-user-hunt.md', content_kind: 'hunt' }),
+    '/?edit=knowledge%2Fthreat-hunts%2Faws%2Frare-iam-user-hunt.md&tab=hunt#workbench',
+  )
+  assert.equal(
+    buildWorkbenchEditHref({ path: 'learning-paths/aws/iam-foundations.md', content_kind: 'learning_path' }),
+    '/?edit=knowledge%2Flearning-paths%2Faws%2Fiam-foundations.md&tab=learning#workbench',
+  )
 })
