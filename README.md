@@ -1,138 +1,43 @@
 # DetLab
 
-Detection-First Visual Detection Engineering, Threat Hunting & DFIR Platform
-
 Build, validate, score, convert, test, visually explore, and document detections and investigations from a single platform.
 
-DetLab is built for detection engineers, threat hunters, SOC analysts, DFIR analysts, and security engineers who want a practical way to improve a detection library without standing up a heavy governance platform.
-
-## Why DetLab
-
-Most detection teams still piece together validation, ATT&CK mapping, backend conversion, scoring, and reporting with ad hoc scripts and spreadsheets.
-
-That creates slow feedback loops:
-- detections get written but not validated consistently
-- ATT&CK coverage is hard to explain quickly
-- backend conversion becomes repetitive manual work
-- weak metadata and weak tests hide inside otherwise useful rules
-- recruiters, hiring managers, and internal stakeholders cannot tell what the detection program actually does
-
-DetLab focuses on the core workflow instead:
-- **Is this detection valid?**
-- **How good is this detection?**
-- **What ATT&CK techniques does it cover?**
-- **Can I convert it to another backend?**
-- **What coverage gaps exist?**
-- **How mature is my detection library?**
-
-Think of it as **Terraform for detections**.
-
-## Features
-
-### 1. Detection Validation
-
-Validate single files or full libraries for:
-- syntax
-- schema compliance
-- ATT&CK metadata presence
-- required detection metadata
-
-```bash
-detlab validate detections
-```
-
-### 2. Detection Conversion
-
-Convert detections to backend-specific formats from one CLI.
-
-Supported outputs:
-- Sigma
-- Splunk SPL
-- Sentinel KQL
-- Elastic EQL
-
-```bash
-detlab convert detections/windows/encoded_powershell.yml --target splunk
-```
-
-### 3. Detection Scoring
-
-Score detections using practical engineering-oriented dimensions:
-- Coverage Score
-- Specificity Score
-- Metadata Score
-- Maintainability Score
-- False Positive Risk
-- Overall Score
-
-```bash
-detlab score detections --format markdown --output reports/scores.md
-```
-
-### 4. ATT&CK Coverage Analysis
-
-Generate ATT&CK-oriented reports for:
-- coverage by tactic
-- coverage by technique
-- coverage by platform
-- missing coverage
-- weak coverage
-- high-risk gaps
-
-```bash
-detlab attack report detections --format markdown --output reports/attack-coverage.md
-```
-
-### 5. GitHub-Backed Detection Source
-
-Point DetLab at a directory in a GitHub repo and sync it into the analysis workspace.
-
-```bash
-detlab source-info detections
-detlab sync-source detections
-```
-
-The current default source is:
-- repo: `egrexsec/cybersecurity-playbook`
-- ref: `main`
-- subdir: `mde/advanced-hunting`
-
-### 6. DetLab Knowledge Management & Documentation Framework
-
-DetLab is not just for detections. It is also the documentation framework that turns learning and investigations into reusable portfolio artifacts.
-
-Core workflow:
-- **Learn → Lab → Investigate → Detect → Hunt → Document → Publish**
-
-Built-in documentation lanes:
-- learning paths
-- labs
+DetLab is evolving from a detection workbench into a detection-first knowledge platform for:
+- detection engineering
+- threat hunting
+- cloud investigations
 - incident response case studies
-- threat hunts
-- detection engineering references
-- AWS security learning notes
-- flaws.cloud and flaws2.cloud case studies
+- learning paths and labs
 
-Authoring support:
-- repo structure under `knowledge/`
-- reusable templates exposed through `/detections/templates`
-- markdown ingestion that can normalize structured knowledge entries into the DetLab workspace
+It combines a Python CLI, FastAPI backend, and Next.js UI so you can move from raw detection content into:
+- validation
+- ATT&CK context
+- investigation guidance
+- scoring
+- backend conversion
+- reusable documentation
 
-See `docs/knowledge-management-framework.md` for the full standard.
+## Core capabilities
 
-### 7. In-Platform Detection Workspace
+- Validate detections against the DetLab canonical schema
+- Score detections for coverage, specificity, maintainability, metadata quality, and false-positive risk
+- Convert canonical detections into Splunk SPL, Sigma, Microsoft Sentinel KQL, and Elastic EQL
+- Generate ATT&CK coverage analytics and weak-signal summaries
+- Browse a detection-first workspace with relationships, response actions, artifacts, and telemetry context
+- Author and inspect detections, investigations, threat hunts, and learning artifacts through a single workbench
+- Sync a GitHub-backed content source into the active workspace for exploration
 
-Select a detection directly in the web UI and pivot through the investigation workflow without leaving the page.
+## CLI examples
 
-Current in-app workflow:
-- search the detection catalog by name, domain, platform, or ATT&CK technique
-- open a detection workspace with overview, ATT&CK context, data sources, and detection logic
-- review triage guidance, investigation steps, false positives, and escalation guidance
-- collect DFIR artifacts, Velociraptor references, cloud telemetry pivots, and response actions
-- inspect the ATT&CK heat map and relationship graph for adjacent activity and follow-on gaps
-- use the detection authoring workbench to validate schema, review scoring, and preview backend conversions
+```bash
+detlab validate detections/windows/encoded_powershell.yml
+detlab score detections --format markdown --output reports/scores.md
+detlab attack report detections --format markdown --output reports/attack-coverage.md
+detlab convert detections/windows/encoded_powershell.yml --target splunk --output exports/encoded_powershell.spl
+```
 
-The same flow is also available through the API:
+## API examples
+
 - `GET /api/detections/catalog`
 - `GET /api/detections/{detection_id}/workspace`
 - `GET /api/schema/domain`
@@ -141,7 +46,7 @@ The same flow is also available through the API:
 
 ## Screenshots
 
-Captured on 2026-06-20 from the verified Docker Compose stack in this repository against the default GitHub-backed source (`egrexsec/cybersecurity-playbook` → `mde/advanced-hunting`).
+Captured on 2026-06-20 from the verified local FastAPI + Next.js workflow in this repository against the default GitHub-backed source (`egrexsec/cybersecurity-playbook` → `mde/advanced-hunting`).
 
 ### 1. Detection Workspace Overview
 
@@ -188,14 +93,15 @@ Architecture highlights:
 - **ATT&CK analytics** for tactic/technique coverage, weak coverage, and high-risk gaps
 - **Export engine** for Splunk SPL, Sigma, Sentinel KQL, and Elastic EQL outputs
 - **GitHub-backed source sync** for pulling a repo directory into the active analysis workspace
-- **Docker Compose** for one-command local deployment
+- **Local run scripts** for one-command startup without containers
 
 For the editable source diagram, see `docs/architecture-diagram.html`.
 
 ## Quick Start
 
 ### Requirements
-- Docker Compose
+- `uv`
+- Node.js + npm
 - GNU Make
 
 ### One-command startup
@@ -208,27 +114,36 @@ make up
 ```
 
 Open:
-- `http://localhost:3000`
+- `http://127.0.0.1:3000`
 
 ### What starts
-- `web` → Next.js workbench UI on port `3000`
-- `api` → FastAPI backend behind the `/api` proxy path
+- `api` → FastAPI backend on `127.0.0.1:8000`
+- `web` → Next.js workbench UI on `127.0.0.1:3000`
 
-### Local website-only smoke test
-
-If you want to run the website outside Docker as a quick test:
+### Useful commands
 
 ```bash
-./.venv/bin/uvicorn detlab.api:app --host 0.0.0.0 --port 8000
+make ps
+make logs
+make down
+make test
+make web-build
+```
+
+### Manual startup
+
+```bash
+uv sync
+uv run uvicorn detlab.api:app --host 127.0.0.1 --port 8000
+
 cd web
 npm install
 npm test
 npm run build
-npm run start -- --hostname 0.0.0.0 --port 3000
+npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-The web app now defaults its internal `/api` proxy target to `http://127.0.0.1:8000` for local runs.
-For container networking, set `DETLAB_INTERNAL_API_ORIGIN=http://api:8000`.
+The web app defaults its internal `/api` proxy target to `http://127.0.0.1:8000` for local runs.
 
 ### Environment defaults
 
@@ -239,17 +154,8 @@ For container networking, set `DETLAB_INTERNAL_API_ORIGIN=http://api:8000`.
 - `DETLAB_SOURCE_REF=main`
 - `DETLAB_SOURCE_SUBDIR=mde/advanced-hunting`
 
-The `/api` root path keeps FastAPI docs and OpenAPI working correctly when the UI proxies requests through the web container.
+The `/api` root path keeps FastAPI docs and OpenAPI working correctly when the web app proxies local requests.
 The GitHub source settings tell the API which repo directory to sync into the active analysis workspace.
-
-### Useful commands
-
-```bash
-make ps
-make logs
-make down
-make test
-```
 
 ## Example Workflow
 
@@ -268,67 +174,40 @@ detlab convert detections/windows/encoded_powershell.yml --target splunk --outpu
 
 ### Browser workflow
 
-1. Open `http://localhost:3000`
-2. Scroll to **Create & Inspect Detection**
-3. Paste or edit detection YAML
-4. Click **Inspect & Score** to validate and score it
-5. Choose `Splunk`, `Sigma`, `KQL`, or `EQL`
-6. Click **Preview Conversion** to render backend output in-place
+1. Open `http://127.0.0.1:3000`
+2. Use the catalog tabs to pivot between **Detections**, **Investigations**, **Threat Hunts**, and **Learning Paths**
+3. Open **Workbench**
+4. Load or paste content for the lane you want to author
+5. Click **Inspect & Score** to validate and score it
+6. Choose `Splunk`, `Sigma`, `KQL`, or `EQL`
+7. Click **Preview Conversion** to render backend output in-place
 
 ## Sample Detection Packs
 
-### Windows Core
-Baseline Windows endpoint detections for execution, process creation, and admin tooling.
+- `detections/windows/`
+- `detections/linux/`
+- `detections/cloud/`
 
-### PowerShell
-Focused PowerShell pack for encoded commands, download activity, and script abuse.
+## Knowledge Lanes
 
-### Credential Access
-Starter pack metadata for credential theft and token abuse coverage expansion.
+- `knowledge/detection-engineering/`
+- `knowledge/threat-hunts/`
+- `knowledge/incident-response-case-studies/`
+- `knowledge/learning-paths/`
+- `knowledge/labs/`
+- `knowledge/aws-security-learning/`
+- `knowledge/flaws-cloud/`
+- `knowledge/flaws2-cloud/`
 
-### Persistence
-Pack centered on foothold-establishment and account abuse use cases.
+## Why this matters
 
-### CloudTrail
-Cloud detection starter pack for AWS control-plane monitoring and audit workflows.
-
-### Linux Core
-Baseline Linux starter pack for auth, process, and persistence telemetry.
-
-## Roadmap
-
-### Next 30 days
-- improve pack-level analytics and pack comparison views
-- add richer detection test result surfacing in the UI
-- add single-detection drill-down pages for validation and score reasoning
-- add export previews for Sigma, SPL, KQL, and EQL in the dashboard
-- tighten scoring heuristics with better maintainability and FP-risk signals
-- expand sample pack content for Linux, CloudTrail, and Credential Access
-
-## Future Vision
-
-The following ideas remain valid, but they are intentionally **not** the V1 story.
-
-Future vision areas:
-- detection marketplace
-- registry ecosystem
-- enterprise governance
-- detection distribution networks
-- trust ecosystems
-- multi-tenant architecture
-- enterprise workflow management
-- detection supply chains
-
-These belong after the workbench is easy to understand, easy to deploy, easy to demo, and easy to adopt.
-
-## Recruiter Demo Test
-
-A good DetLab demo should let someone understand the value in under 30 seconds:
+DetLab is designed so that:
 - detections are validated
 - detections are scored
 - ATT&CK coverage is visible
 - backend conversion exists
 - packs make the project easy to demo and extend
+- documentation becomes part of the deliverable, not an afterthought
 
 A detection engineer should understand the core workflow in under 2 minutes.
-A new user should be able to deploy the stack in under 5 minutes with Docker Compose and `make up`.
+A new user should be able to boot the local stack in under 5 minutes with `make up`.

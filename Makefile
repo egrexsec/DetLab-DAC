@@ -3,32 +3,26 @@ SHELL := /bin/bash
 .PHONY: up down restart logs ps test api-test web-build
 
 up:
-	docker compose up -d --build
-
+	./scripts/start.sh
 
 down:
-	docker compose down
-
+	./scripts/stop.sh
 
 restart: down up
 
-
 logs:
-	docker compose logs -f api web
-
+	@mkdir -p .detlab-run
+	tail -f .detlab-run/api.log .detlab-run/web.log
 
 ps:
-	docker compose ps
-
+	@bash -lc 'for svc in api web; do pidfile=.detlab-run/$$svc.pid; if [[ -f $$pidfile ]] && kill -0 $$(cat $$pidfile) >/dev/null 2>&1; then echo "$$svc: running (PID $$(cat $$pidfile))"; else echo "$$svc: stopped"; fi; done'
 
 test:
-	python3 -m pytest -q
-
+	uv run pytest
 
 api-test:
-	curl -sS http://localhost:3000/api/health && echo
-	curl -sS http://localhost:3000/api/dashboard | python3 -m json.tool >/dev/null
-
+	curl -sS http://127.0.0.1:8000/health && echo
+	curl -sS http://127.0.0.1:8000/dashboard | python3 -m json.tool >/dev/null
 
 web-build:
 	cd web && npm run build

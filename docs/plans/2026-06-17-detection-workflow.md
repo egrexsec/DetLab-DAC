@@ -198,7 +198,7 @@ Expected: PASS.
 **Step 2: Rebuild frontend and services**
 
 Run:
-`cd /root/repo-audit/DetLab-DAC && docker compose up -d --build`
+`cd /root/repo-audit/DetLab-DAC && ./scripts/start.sh`
 
 Expected: services rebuild successfully.
 

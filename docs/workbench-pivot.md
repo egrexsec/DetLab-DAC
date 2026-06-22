@@ -136,7 +136,7 @@ Pack goals:
 ## Deployment simplification recommendations
 
 Required V1 deployment shape:
-- Docker Compose
+- local FastAPI + Next.js startup scripts
 - Makefile
 - `.env.example`
 - one-command startup
@@ -150,7 +150,7 @@ make up
 ```
 
 Design rules:
-- no Kubernetes requirement
+- no container orchestrator requirement
 - no enterprise bootstrap dependency
 - local demo should work from repo root
 - web should proxy API cleanly via `/api`

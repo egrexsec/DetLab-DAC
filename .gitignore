@@ -12,3 +12,4 @@ reports/*.md
 web/node_modules/
 web/.next/
 .hermes/
+.detlab-run/
