@@ -1,4 +1,5 @@
 import os
+import subprocess
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -75,10 +76,12 @@ class DetectionSaveRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=20000)
 
 
+class RepoCommitRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=200)
+
 
 def _load_detections(path: str):
     return load_detections(str(resolve_detection_dir(path)))
-
 
 
 def _resolve_repo_save_path(relative_path: str) -> tuple[str, Path]:
@@ -109,7 +112,6 @@ def _resolve_repo_save_path(relative_path: str) -> tuple[str, Path]:
     return candidate.as_posix(), resolved
 
 
-
 def _save_repo_content(relative_path: str, content: str) -> dict:
     inspection = inspect_detection_content(content)
     if not inspection['valid']:
@@ -130,6 +132,166 @@ def _save_repo_content(relative_path: str, content: str) -> dict:
         'score': inspection.get('score'),
     }
 
+
+def _normalize_content_index_key(content_kind: str) -> str:
+    normalized = str(content_kind or 'investigation').strip().lower().replace('-', '_')
+    if normalized == 'hunt':
+        return 'hunts'
+    if normalized in {'investigation', 'incident_response'}:
+        return 'investigations'
+    if normalized in {'forensics', 'forensic', 'artifact'}:
+        return 'forensics'
+    if normalized in {'learning_path', 'lab'}:
+        return 'learning_paths'
+    return 'investigations'
+
+
+def _build_content_indexes(path: str = 'knowledge') -> dict:
+    catalog = build_detection_catalog(path)
+    indexes = {
+        'hunts': {
+            'slug': 'threat-hunts',
+            'title': 'Threat Hunts',
+            'description': 'Hypothesis-driven hunts, pivots, and follow-on detections.',
+            'count': 0,
+            'items': [],
+        },
+        'investigations': {
+            'slug': 'investigations',
+            'title': 'Investigations',
+            'description': 'Incident response narratives, cloud case studies, and investigative writeups.',
+            'count': 0,
+            'items': [],
+        },
+        'forensics': {
+            'slug': 'forensic-writeups',
+            'title': 'Forensic Writeups',
+            'description': 'Artifact-centric DFIR notes, timelines, and evidence handling guides.',
+            'count': 0,
+            'items': [],
+        },
+        'learning_paths': {
+            'slug': 'learning-paths',
+            'title': 'Learning Paths',
+            'description': 'Structured labs, study tracks, and reusable learning artifacts.',
+            'count': 0,
+            'items': [],
+        },
+    }
+
+    for detection in catalog['detections']:
+        bucket = indexes[_normalize_content_index_key(detection.get('content_kind', ''))]
+        item = {
+            'id': detection['id'],
+            'name': detection['name'],
+            'title': detection['title'],
+            'description': detection['description'],
+            'severity': detection['severity'],
+            'status': detection['status'],
+            'content_kind': detection['content_kind'],
+            'path': str(detection.get('path') or ''),
+            'domain': detection['domain'],
+            'platforms': detection['platforms'],
+            'attack_techniques': detection['attack_techniques'],
+        }
+        bucket['items'].append(item)
+
+    for bucket in indexes.values():
+        bucket['items'] = sorted(bucket['items'], key=lambda item: (item['name'], item['id']))
+        bucket['count'] = len(bucket['items'])
+
+    return {
+        'schema_version': catalog['schema_version'],
+        'total': sum(bucket['count'] for bucket in indexes.values()),
+        'indexes': indexes,
+    }
+
+
+def _run_git(*args: str) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            ['git', *args],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        detail = exc.stderr.strip() or exc.stdout.strip() or 'Git command failed'
+        raise HTTPException(status_code=400, detail=detail) from exc
+
+
+def _get_repo_branch() -> str:
+    return _run_git('symbolic-ref', '--short', 'HEAD').stdout.strip()
+
+
+def _get_repo_changed_files() -> list[dict[str, str]]:
+    output = _run_git('status', '--short', '--untracked-files=all').stdout.splitlines()
+    changed_files = []
+    for line in output:
+        if not line.strip():
+            continue
+        changed_files.append(
+            {
+                'status': line[:2].strip() or '??',
+                'path': line[3:].strip(),
+            }
+        )
+    return changed_files
+
+
+def _build_repo_status() -> dict:
+    changed_files = _get_repo_changed_files()
+    return {
+        'branch': _get_repo_branch(),
+        'clean': len(changed_files) == 0,
+        'changed_files': changed_files,
+    }
+
+
+def _get_repo_staged_files() -> list[dict[str, str]]:
+    output = _run_git('diff', '--cached', '--name-status').stdout.splitlines()
+    staged_files = []
+    for line in output:
+        if not line.strip():
+            continue
+        parts = line.split('\t', 1)
+        status = parts[0].strip() if parts else 'M'
+        path = parts[1].strip() if len(parts) > 1 else ''
+        staged_files.append({'status': status, 'path': path})
+    return staged_files
+
+
+def _repo_diff(relative_path: str | None = None) -> dict:
+    args = ['diff', '--', relative_path] if relative_path else ['diff']
+    diff_output = _run_git(*args).stdout
+    return {
+        'path': relative_path,
+        'diff': diff_output,
+        **_build_repo_status(),
+    }
+
+
+def _repo_commit(message: str) -> dict:
+    commit_message = message.strip()
+    if not commit_message:
+        raise HTTPException(status_code=400, detail='Commit message cannot be empty')
+
+    changed_files = _get_repo_changed_files()
+    if not changed_files:
+        raise HTTPException(status_code=400, detail='No repo changes to commit')
+
+    _run_git('add', '-A')
+    staged_files = _get_repo_staged_files()
+    _run_git('commit', '-m', commit_message)
+    commit = _run_git('rev-parse', 'HEAD').stdout.strip()
+    return {
+        'committed': True,
+        'message': commit_message,
+        'commit': commit,
+        'branch': _get_repo_branch(),
+        'changed_files': staged_files,
+    }
 
 
 def _build_review_queue(analytics_data: dict, score_data: list[dict]) -> dict:
@@ -158,7 +320,6 @@ def _build_review_queue(analytics_data: dict, score_data: list[dict]) -> dict:
         "high_risk_gaps": high_risk_gaps,
         "weak_detections": weak_detections,
     }
-
 
 
 def _build_dashboard_payload(path: str = "detections") -> dict:
@@ -258,6 +419,11 @@ def detection_catalog(path: str = "detections"):
     return build_detection_catalog(path)
 
 
+@app.get('/content/indexes')
+def content_indexes(path: str = 'knowledge'):
+    return _build_content_indexes(path)
+
+
 @app.get("/detections/templates")
 def detection_templates():
     return build_detection_templates()
@@ -297,3 +463,18 @@ def save_detection(request: DetectionSaveRequest):
     if result.get('saved'):
         return result
     return JSONResponse(status_code=422, content=result)
+
+
+@app.get('/repo/status')
+def repo_status():
+    return _build_repo_status()
+
+
+@app.get('/repo/diff')
+def repo_diff(path: str | None = None):
+    return _repo_diff(path)
+
+
+@app.post('/repo/commit')
+def repo_commit(request: RepoCommitRequest):
+    return _repo_commit(request.message)

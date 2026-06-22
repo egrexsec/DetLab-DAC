@@ -507,10 +507,31 @@ export default function HomePage() {
         <Header />
 
         <nav style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '24px', marginBottom: '28px' }}>
-          {['Detection Workspace', 'Documentation Framework', 'Coverage Overview', 'Score Review', 'Repository Source', 'Workbench'].map((item) => (
+          {[
+            'Detection Workspace',
+            'Documentation Framework',
+            'Coverage Overview',
+            'Score Review',
+            'Repository Source',
+            'Workbench',
+            'Threat Hunts Index',
+            'Investigations Index',
+            'Forensic Writeups Index',
+            'Learning Paths Index',
+          ].map((item) => (
             <a
               key={item}
-              href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
+              href={
+                item === 'Threat Hunts Index'
+                  ? '/content/threat-hunts'
+                  : item === 'Investigations Index'
+                    ? '/content/investigations'
+                    : item === 'Forensic Writeups Index'
+                      ? '/content/forensic-writeups'
+                      : item === 'Learning Paths Index'
+                        ? '/content/learning-paths'
+                        : `#${item.toLowerCase().replace(/\s+/g, '-')}`
+              }
               style={{
                 background: '#111827',
                 color: '#cbd5e1',

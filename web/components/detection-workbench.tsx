@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { getRepoActionDefinitions, summarizeRepoStatus } from '../config/repo-workflow.mjs'
 
 type ValidationErrorRow = {
   loc: Array<string | number>
@@ -51,6 +52,31 @@ type SaveResponse = InspectResponse & {
   saved?: boolean
   path?: string
   repo_root?: string
+}
+
+type RepoStatus = {
+  branch: string
+  clean: boolean
+  changed_files: Array<{
+    path: string
+    status: string
+  }>
+}
+
+type RepoDiffResponse = RepoStatus & {
+  path?: string | null
+  diff: string
+}
+
+type RepoCommitResponse = {
+  committed: boolean
+  message: string
+  commit: string
+  branch: string
+  changed_files: Array<{
+    path: string
+    status: string
+  }>
 }
 
 type DetectionTemplateCatalog = {
@@ -196,12 +222,21 @@ export default function DetectionWorkbench() {
   const [inspectResult, setInspectResult] = useState<InspectResponse | null>(null)
   const [convertResult, setConvertResult] = useState<ConvertResponse | null>(null)
   const [saveResult, setSaveResult] = useState<SaveResponse | null>(null)
+  const [repoStatus, setRepoStatus] = useState<RepoStatus | null>(null)
+  const [repoDiff, setRepoDiff] = useState<RepoDiffResponse | null>(null)
+  const [commitResult, setCommitResult] = useState<RepoCommitResponse | null>(null)
+  const [commitMessage, setCommitMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [inspecting, setInspecting] = useState(false)
   const [converting, setConverting] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [loadingRepoStatus, setLoadingRepoStatus] = useState(false)
+  const [loadingRepoDiff, setLoadingRepoDiff] = useState(false)
+  const [committing, setCommitting] = useState(false)
 
   const recommendations = useMemo(() => inspectResult?.score?.recommendations ?? [], [inspectResult])
+  const repoActions = useMemo(() => getRepoActionDefinitions(), [])
+  const repoSummary = useMemo(() => summarizeRepoStatus(repoStatus), [repoStatus])
 
   const activeAuthoringTab = useMemo(() => AUTHORING_TABS.find((tab) => tab.id === activeTab) ?? AUTHORING_TABS[0], [activeTab])
 
@@ -241,6 +276,26 @@ export default function DetectionWorkbench() {
     setSaveResult(null)
     setErrorMessage(null)
   }, [activeTab])
+
+  async function loadRepoStatus() {
+    setLoadingRepoStatus(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/repo/status`)
+      const body = await response.json()
+      if (!response.ok) {
+        throw new Error(body?.detail || `repo status request failed: ${response.status}`)
+      }
+      setRepoStatus(body)
+    } catch {
+      setRepoStatus(null)
+    } finally {
+      setLoadingRepoStatus(false)
+    }
+  }
+
+  useEffect(() => {
+    loadRepoStatus()
+  }, [])
 
   function loadTemplate(format: string) {
     const template = templateCatalog?.templates[format]
@@ -334,12 +389,67 @@ export default function DetectionWorkbench() {
       setSaveResult(savedBody)
       setInspectResult(savedBody)
       setConvertResult(null)
+      setCommitResult(null)
+      if (!commitMessage.trim()) {
+        setCommitMessage(`Update ${savedBody.path}`)
+      }
       setErrorMessage(`Saved to ${savedBody.path}`)
+      await loadRepoStatus()
     } catch {
       setSaveResult(null)
       setErrorMessage('The save request failed. Check the API service and retry.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function previewRepoDiff() {
+    setLoadingRepoDiff(true)
+    setErrorMessage(null)
+
+    try {
+      const params = new URLSearchParams()
+      if (savePath.trim()) {
+        params.set('path', savePath.trim())
+      }
+      const response = await fetch(`${API_BASE_URL}/repo/diff?${params.toString()}`)
+      const body = await response.json()
+      if (!response.ok) {
+        throw new Error(body?.detail || `repo diff request failed: ${response.status}`)
+      }
+      setRepoDiff(body)
+      setRepoStatus(body)
+    } catch {
+      setRepoDiff(null)
+      setErrorMessage('The repo diff request failed. Check Git status and retry.')
+    } finally {
+      setLoadingRepoDiff(false)
+    }
+  }
+
+  async function commitRepoChanges() {
+    setCommitting(true)
+    setErrorMessage(null)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/repo/commit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: commitMessage }),
+      })
+      const body = await response.json()
+      if (!response.ok) {
+        throw new Error(body?.detail || `repo commit request failed: ${response.status}`)
+      }
+      setCommitResult(body)
+      setRepoDiff(null)
+      setRepoStatus({ branch: body.branch, clean: true, changed_files: [] })
+      setErrorMessage(`Committed ${body.commit.slice(0, 7)} on ${body.branch}`)
+    } catch (error) {
+      setCommitResult(null)
+      setErrorMessage(error instanceof Error ? error.message : 'The repo commit request failed. Review the diff and retry.')
+    } finally {
+      setCommitting(false)
     }
   }
 
@@ -437,6 +547,20 @@ export default function DetectionWorkbench() {
             >
               {saving ? 'Saving…' : 'Save to Repo'}
             </button>
+            <button
+              onClick={previewRepoDiff}
+              disabled={loadingRepoDiff}
+              style={{ background: '#1d4ed8', color: '#dbeafe', border: 'none', borderRadius: '10px', padding: '10px 14px', cursor: 'pointer' }}
+            >
+              {loadingRepoDiff ? 'Loading diff…' : 'Diff Preview'}
+            </button>
+            <button
+              onClick={commitRepoChanges}
+              disabled={committing || !commitMessage.trim()}
+              style={{ background: '#7c3aed', color: '#f3e8ff', border: 'none', borderRadius: '10px', padding: '10px 14px', cursor: 'pointer' }}
+            >
+              {committing ? 'Committing…' : 'Commit from UI'}
+            </button>
           </div>
           <div style={{ color: '#94a3b8', fontSize: '0.88rem' }}>
             Repo files are the source of truth. Save directly into detections/ or knowledge/.
@@ -465,6 +589,79 @@ export default function DetectionWorkbench() {
           />
           <div style={{ color: '#64748b', fontSize: '0.8rem' }}>
             Allowed roots: <code>detections/</code> and <code>knowledge/</code>. Allowed file types: <code>.yml</code>, <code>.yaml</code>, <code>.md</code>.
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+          <div style={{ background: '#111827', border: '1px solid #334155', borderRadius: '14px', padding: '14px' }}>
+            <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>Git-aware actions</div>
+            <div style={{ display: 'grid', gap: '8px' }}>
+              {repoActions.map((action) => (
+                <div key={action.id}>
+                  <div style={{ fontWeight: 700 }}>{action.label}</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.88rem' }}>{action.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ background: '#111827', border: '1px solid #334155', borderRadius: '14px', padding: '14px' }}>
+            <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>Commit message</div>
+            <input
+              value={commitMessage}
+              onChange={(event) => setCommitMessage(event.target.value)}
+              placeholder="e.g. Add IAM threat hunt artifact"
+              style={{
+                width: '100%',
+                background: '#020617',
+                color: '#e2e8f0',
+                border: '1px solid #334155',
+                borderRadius: '12px',
+                padding: '12px 14px',
+                boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '8px' }}>
+              Write the exact Git message to use when committing the current repo changes.
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+          <div style={{ background: '#111827', border: '1px solid #334155', borderRadius: '14px', padding: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Repo status</div>
+              <button
+                onClick={loadRepoStatus}
+                disabled={loadingRepoStatus}
+                style={{ background: '#020617', color: '#cbd5e1', border: '1px solid #334155', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer' }}
+              >
+                {loadingRepoStatus ? 'Refreshing…' : 'Refresh'}
+              </button>
+            </div>
+            <div style={{ marginTop: '8px', color: '#e2e8f0' }}>{repoSummary}</div>
+            <div style={{ display: 'grid', gap: '6px', marginTop: '12px' }}>
+              {repoStatus?.changed_files?.length ? (
+                repoStatus.changed_files.map((item) => (
+                  <div key={`${item.status}-${item.path}`} style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: '0.86rem', color: '#cbd5e1' }}>
+                    <code>{item.status}</code> {item.path}
+                  </div>
+                ))
+              ) : (
+                <div style={{ color: '#64748b', fontSize: '0.86rem' }}>No uncommitted repo changes detected.</div>
+              )}
+            </div>
+          </div>
+          <div style={{ background: '#111827', border: '1px solid #334155', borderRadius: '14px', padding: '14px' }}>
+            <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>Latest commit action</div>
+            {commitResult ? (
+              <div style={{ display: 'grid', gap: '8px' }}>
+                <div><strong>Branch:</strong> {commitResult.branch}</div>
+                <div><strong>Commit:</strong> <code>{commitResult.commit}</code></div>
+                <div><strong>Message:</strong> {commitResult.message}</div>
+              </div>
+            ) : (
+              <div style={{ color: '#64748b', fontSize: '0.86rem' }}>No UI commit has been created in this session yet.</div>
+            )}
           </div>
         </div>
 
@@ -584,6 +781,30 @@ export default function DetectionWorkbench() {
               <div style={{ color: '#94a3b8' }}>No remediation recommendations were generated for this content.</div>
             ) : (
               <div style={{ color: '#94a3b8' }}>Inspect content to generate recommendations.</div>
+            )}
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <div style={{ color: '#94a3b8', fontSize: '0.86rem', marginBottom: '8px' }}>Diff Preview</div>
+            {repoDiff?.diff ? (
+              <pre
+                style={{
+                  margin: 0,
+                  padding: '16px',
+                  background: '#020617',
+                  border: '1px solid #334155',
+                  borderRadius: '14px',
+                  overflowX: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  color: '#e2e8f0',
+                  maxHeight: '260px',
+                }}
+              >
+                {repoDiff.diff}
+              </pre>
+            ) : (
+              <div style={{ color: '#94a3b8' }}>Save content, then use Diff Preview to inspect the current repo delta before committing.</div>
             )}
           </div>
 
