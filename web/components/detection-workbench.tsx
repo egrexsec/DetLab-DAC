@@ -124,11 +124,61 @@ const cardStyle = {
   padding: '20px',
 } as const
 
+type AuthoringTab = {
+  id: 'detection' | 'investigation' | 'hunt' | 'learning'
+  label: string
+  title: string
+  description: string
+  templateFormats: string[]
+  suggestedPath: string
+  workflow: string[]
+}
+
+const AUTHORING_TABS: AuthoringTab[] = [
+  {
+    id: 'detection',
+    label: 'Detections',
+    title: 'Detection engineering workflow',
+    description: 'Author a detection, inspect scoring and validation, then preview backend conversions.',
+    templateFormats: ['yaml', 'markdown', 'detection_engineering'],
+    suggestedPath: 'detections/<platform>/<name>.yml or knowledge/detection-engineering/<topic>.md',
+    workflow: ['Load a detection template.', 'Edit logic, ATT&CK, and metadata.', 'Inspect & score.', 'Preview Sigma, Splunk, KQL, or EQL conversion.'],
+  },
+  {
+    id: 'investigation',
+    label: 'Investigations',
+    title: 'Investigation and IR workflow',
+    description: 'Document cloud investigations, incident response case studies, and forensics-style writeups as reusable workspace artifacts.',
+    templateFormats: ['incident_response', 'flaws_cloud'],
+    suggestedPath: 'knowledge/incident-response-case-studies/<topic>.md or knowledge/flaws-cloud/<topic>.md',
+    workflow: ['Load an investigation template.', 'Capture indicators, timeline, evidence, and root cause.', 'Inspect the normalized workspace output.', 'Reuse response actions and detection opportunities.'],
+  },
+  {
+    id: 'hunt',
+    label: 'Threat Hunts',
+    title: 'Threat hunting workflow',
+    description: 'Turn hunt hypotheses, queries, findings, and follow-up detections into normalized hunt content.',
+    templateFormats: ['threat_hunt'],
+    suggestedPath: 'knowledge/threat-hunts/<platform>/<name>.md',
+    workflow: ['Load the threat-hunt template.', 'Document the hypothesis and queries.', 'Inspect the normalized content.', 'Promote findings into follow-on detections or investigations.'],
+  },
+  {
+    id: 'learning',
+    label: 'Learning & Labs',
+    title: 'Learning and lab workflow',
+    description: 'Capture learning paths, AWS study notes, and labs in the same system so they become portfolio-ready knowledge artifacts.',
+    templateFormats: ['learning_path', 'aws_security_learning', 'lab'],
+    suggestedPath: 'knowledge/learning-paths/, knowledge/aws-security-learning/, or knowledge/labs/',
+    workflow: ['Load the matching learning or lab template.', 'Document concepts, environment, evidence, and lessons learned.', 'Inspect the normalized content.', 'Link out to detections, hunts, or follow-up investigations.'],
+  },
+] as const
+
 export default function DetectionWorkbench() {
   const [content, setContent] = useState(SAMPLE_DETECTION_YAML)
   const [target, setTarget] = useState('splunk')
   const [templateCatalog, setTemplateCatalog] = useState<DetectionTemplateCatalog | null>(null)
   const [templateFormat, setTemplateFormat] = useState('yaml')
+  const [activeTab, setActiveTab] = useState<(typeof AUTHORING_TABS)[number]['id']>('detection')
   const [inspectResult, setInspectResult] = useState<InspectResponse | null>(null)
   const [convertResult, setConvertResult] = useState<ConvertResponse | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -136,6 +186,14 @@ export default function DetectionWorkbench() {
   const [converting, setConverting] = useState(false)
 
   const recommendations = useMemo(() => inspectResult?.score?.recommendations ?? [], [inspectResult])
+
+  const activeAuthoringTab = useMemo(() => AUTHORING_TABS.find((tab) => tab.id === activeTab) ?? AUTHORING_TABS[0], [activeTab])
+
+  const availableTemplates = useMemo(() => {
+    const defaults = { yaml: { label: 'Canonical YAML', description: '', content: SAMPLE_DETECTION_YAML } }
+    const templates = templateCatalog?.templates ?? defaults
+    return Object.entries(templates).filter(([format]) => activeAuthoringTab.templateFormats.includes(format))
+  }, [activeAuthoringTab, templateCatalog])
 
   useEffect(() => {
     async function loadTemplates() {
@@ -154,6 +212,13 @@ export default function DetectionWorkbench() {
 
     loadTemplates()
   }, [])
+
+  useEffect(() => {
+    const matching = availableTemplates.find(([format]) => format === templateFormat)
+    if (!matching && availableTemplates[0]) {
+      setTemplateFormat(availableTemplates[0][0])
+    }
+  }, [availableTemplates, templateFormat])
 
   function loadTemplate(format: string) {
     const template = templateCatalog?.templates[format]
@@ -187,7 +252,7 @@ export default function DetectionWorkbench() {
       const body = await response.json()
       setInspectResult(body)
       if (!response.ok) {
-        setErrorMessage('Validation failed. Fix the detection content and inspect again.')
+        setErrorMessage('Validation failed. Fix the content and inspect again.')
       }
     } catch {
       setInspectResult(null)
@@ -210,7 +275,7 @@ export default function DetectionWorkbench() {
       const body = await response.json()
       setConvertResult(body)
       if (!response.ok) {
-        setErrorMessage('Conversion could not be generated. Inspect the detection or fix validation errors first.')
+        setErrorMessage('Conversion could not be generated. Inspect the content or fix validation errors first.')
       }
     } catch {
       setConvertResult(null)
@@ -223,20 +288,72 @@ export default function DetectionWorkbench() {
   return (
     <div style={{ display: 'grid', gap: '16px', marginTop: '16px' }}>
       <div style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          {AUTHORING_TABS.map((tab) => {
+            const active = tab.id === activeTab
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  background: active ? '#0f172a' : '#111827',
+                  color: active ? '#e0f2fe' : '#cbd5e1',
+                  border: active ? '1px solid #38bdf8' : '1px solid #334155',
+                  borderRadius: '999px',
+                  padding: '9px 13px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                }}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.7fr', gap: '16px', alignItems: 'start' }}>
           <div>
-            <h3 style={{ margin: 0 }}>Create & Inspect Detection</h3>
-            <p style={{ color: '#94a3b8', marginBottom: 0 }}>
-              Draft a detection in YAML, inspect validation and scoring results, then optionally preview a backend conversion.
-            </p>
+            <h3 style={{ margin: 0 }}>{activeAuthoringTab.title}</h3>
+            <p style={{ color: '#94a3b8', marginBottom: 0 }}>{activeAuthoringTab.description}</p>
           </div>
+          <div style={{ background: '#111827', border: '1px solid #334155', borderRadius: '14px', padding: '14px' }}>
+            <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Suggested repo path</div>
+            <div style={{ marginTop: '6px', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: '0.88rem' }}>
+              {activeAuthoringTab.suggestedPath}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+          <div style={{ background: '#111827', border: '1px solid #334155', borderRadius: '14px', padding: '14px' }}>
+            <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>Workflow</div>
+            <ol style={{ margin: 0, paddingLeft: '18px', display: 'grid', gap: '6px' }}>
+              {activeAuthoringTab.workflow.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          </div>
+          <div style={{ background: '#111827', border: '1px solid #334155', borderRadius: '14px', padding: '14px' }}>
+            <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>Available templates</div>
+            <div style={{ display: 'grid', gap: '6px' }}>
+              {availableTemplates.map(([format, template]) => (
+                <div key={format}>
+                  <div style={{ fontWeight: 700 }}>{template.label}</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.88rem' }}>{template.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'center', flexWrap: 'wrap', marginTop: '16px' }}>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
             <select
               value={templateFormat}
               onChange={(event) => setTemplateFormat(event.target.value)}
               style={{ background: '#111827', color: '#e2e8f0', border: '1px solid #334155', borderRadius: '10px', padding: '10px 12px' }}
             >
-              {Object.entries(templateCatalog?.templates ?? { yaml: { label: 'Canonical YAML', description: '', content: SAMPLE_DETECTION_YAML } }).map(([format, template]) => (
+              {availableTemplates.map(([format, template]) => (
                 <option key={format} value={format}>
                   {template.label}
                 </option>
@@ -256,7 +373,11 @@ export default function DetectionWorkbench() {
               {inspecting ? 'Inspecting…' : 'Inspect & Score'}
             </button>
           </div>
+          <div style={{ color: '#94a3b8', fontSize: '0.88rem' }}>
+            DetLab normalizes all tabs into the same workspace model so detections, hunts, and investigations stay reusable.
+          </div>
         </div>
+
         <textarea
           value={content}
           onChange={(event) => setContent(event.target.value)}
@@ -327,7 +448,7 @@ export default function DetectionWorkbench() {
             </div>
           ) : (
             <div style={{ color: '#94a3b8' }}>
-              Submit a detection to see parsed metadata, validation state, and score breakdown.
+              Submit content from any tab to see parsed metadata, validation state, and score breakdown.
             </div>
           )}
         </div>
@@ -365,9 +486,9 @@ export default function DetectionWorkbench() {
                 ))}
               </ul>
             ) : inspectResult?.valid ? (
-              <div style={{ color: '#94a3b8' }}>No remediation recommendations were generated for this detection.</div>
+              <div style={{ color: '#94a3b8' }}>No remediation recommendations were generated for this content.</div>
             ) : (
-              <div style={{ color: '#94a3b8' }}>Inspect a detection to generate recommendations.</div>
+              <div style={{ color: '#94a3b8' }}>Inspect content to generate recommendations.</div>
             )}
           </div>
 

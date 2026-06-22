@@ -279,6 +279,7 @@ def build_detection_catalog(path: str = "detections") -> dict[str, Any]:
                 "data_sources": [item["name"] for item in _default_data_sources(detection)],
                 "related_detections_count": len(_relationship_entries(detection, detections)),
                 "investigation_readiness_score": readiness_score,
+                "content_kind": str(detection.detection.selection.get("ContentKind") or "detection"),
             }
         )
 

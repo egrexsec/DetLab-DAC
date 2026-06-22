@@ -108,6 +108,7 @@ type DetectionCatalogEntry = {
   data_sources: string[]
   related_detections_count: number
   investigation_readiness_score: number
+  content_kind: string
 }
 
 type DetectionCatalogResponse = {
@@ -282,10 +283,24 @@ const TACTIC_ORDER = [
   'discovery',
   'lateral-movement',
   'collection',
-  'command-and-control',
   'exfiltration',
   'impact',
 ]
+
+type ContentTab = {
+  id: 'all' | 'detection' | 'investigation' | 'hunt' | 'learning'
+  label: string
+  kinds: string[]
+}
+
+const CONTENT_TABS: ContentTab[] = [
+  { id: 'all', label: 'All Content', kinds: [] },
+  { id: 'detection', label: 'Detections', kinds: ['detection'] },
+  { id: 'investigation', label: 'Investigations', kinds: ['investigation', 'incident_response', 'forensics'] },
+  { id: 'hunt', label: 'Threat Hunts', kinds: ['hunt'] },
+  { id: 'learning', label: 'Learning Paths', kinds: ['learning_path', 'lab'] },
+]
+
 const shellStyle = {
   minHeight: '100vh',
   background: '#020617',
@@ -335,6 +350,17 @@ function relationshipColor(relationship: string) {
   return '#94a3b8'
 }
 
+function contentKindLabel(contentKind: string) {
+  if (contentKind === 'detection') return 'Detection'
+  if (contentKind === 'investigation') return 'Investigation'
+  if (contentKind === 'incident_response') return 'Incident Response'
+  if (contentKind === 'forensics') return 'Forensics'
+  if (contentKind === 'hunt') return 'Threat Hunt'
+  if (contentKind === 'learning_path') return 'Learning Path'
+  if (contentKind === 'lab') return 'Lab'
+  return contentKind.replace(/_/g, ' ')
+}
+
 export default function HomePage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [catalog, setCatalog] = useState<DetectionCatalogResponse | null>(null)
@@ -343,6 +369,7 @@ export default function HomePage() {
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [workspaceState, setWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [catalogQuery, setCatalogQuery] = useState('')
+  const [activeCatalogTab, setActiveCatalogTab] = useState<(typeof CONTENT_TABS)[number]['id']>('all')
 
   useEffect(() => {
     async function loadInitialData() {
@@ -411,14 +438,21 @@ export default function HomePage() {
 
   const filteredDetections = useMemo(() => {
     const entries = catalog?.detections ?? []
+    const activeTab = CONTENT_TABS.find((tab) => tab.id === activeCatalogTab)
     const query = catalogQuery.trim().toLowerCase()
-    if (!query) return entries
+
     return entries.filter((entry) => {
+      const allowedKinds = (activeTab?.kinds ?? []) as readonly string[]
+      const kindMatch = !activeTab || allowedKinds.length === 0 || allowedKinds.includes(entry.content_kind)
+      if (!kindMatch) return false
+      if (!query) return true
+
       const haystack = [
         entry.name,
         entry.description,
         entry.severity,
         entry.status,
+        entry.content_kind,
         ...entry.domain,
         ...entry.platforms,
         ...entry.attack_techniques,
@@ -428,7 +462,17 @@ export default function HomePage() {
         .toLowerCase()
       return haystack.includes(query)
     })
-  }, [catalog, catalogQuery])
+  }, [catalog, catalogQuery, activeCatalogTab])
+
+  useEffect(() => {
+    if (!filteredDetections.length) {
+      setSelectedDetectionId(null)
+      return
+    }
+    if (!selectedDetectionId || !filteredDetections.some((entry) => entry.id === selectedDetectionId)) {
+      setSelectedDetectionId(filteredDetections[0].id)
+    }
+  }, [filteredDetections, selectedDetectionId])
 
   if (loadState === 'loading') {
     return (
@@ -533,6 +577,28 @@ export default function HomePage() {
                   detection first
                 </span>
               </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px' }}>
+                {CONTENT_TABS.map((tab) => {
+                  const active = tab.id === activeCatalogTab
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveCatalogTab(tab.id)}
+                      style={{
+                        background: active ? '#0f172a' : '#111827',
+                        color: active ? '#e0f2fe' : '#cbd5e1',
+                        border: active ? '1px solid #38bdf8' : '1px solid #334155',
+                        borderRadius: '999px',
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </div>
               <input
                 value={catalogQuery}
                 onChange={(event) => setCatalogQuery(event.target.value)}
@@ -567,7 +633,10 @@ export default function HomePage() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
                         <div style={{ fontWeight: 700 }}>{entry.name}</div>
-                        <SeverityBadge value={entry.severity} />
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'end' }}>
+                          <Tag label={contentKindLabel(entry.content_kind)} />
+                          <SeverityBadge value={entry.severity} />
+                        </div>
                       </div>
                       <div style={{ color: '#94a3b8', fontSize: '0.92rem', marginTop: '8px' }}>{entry.description}</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
@@ -627,7 +696,7 @@ export default function HomePage() {
                       <Tag label={workspace.overview.attack_mappings.primary.tactic} />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px', marginTop: '16px' }}>
-                      <StatCard label="Purpose" value="Detection triage anchor" />
+                      <StatCard label="Purpose" value={contentKindLabel(String(workspace.overview.content_source.kind ?? 'detection'))} />
                       <StatCard label="Data Sources" value={String(workspace.overview.data_sources.length)} />
                       <StatCard label="Related Detections" value={String(workspace.related_detections.length)} />
                       <StatCard label="Source Format" value={workspace.source_format} />
