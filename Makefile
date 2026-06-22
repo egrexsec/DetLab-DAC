@@ -1,6 +1,10 @@
 SHELL := /bin/bash
 
-.PHONY: up down restart logs ps test api-test web-build
+.PHONY: setup up down restart logs ps test api-test web-build check
+
+setup:
+	uv sync --all-extras
+	cd web && npm install
 
 up:
 	./scripts/start.sh
@@ -21,8 +25,10 @@ test:
 	uv run pytest
 
 api-test:
-	curl -sS http://127.0.0.1:8000/health && echo
-	curl -sS http://127.0.0.1:8000/dashboard | python3 -m json.tool >/dev/null
+	curl -fsS http://127.0.0.1:8000/health && echo
+	curl -fsS http://127.0.0.1:8000/dashboard | python3 -m json.tool >/dev/null
 
 web-build:
 	cd web && npm run build
+
+check: test api-test web-build

@@ -110,6 +110,7 @@ For the editable source diagram, see `docs/architecture-diagram.html`.
 git clone https://github.com/egrexsec/DetLab-DAC.git
 cd DetLab-DAC
 cp .env.example .env
+make setup
 make up
 ```
 
@@ -123,23 +124,23 @@ Open:
 ### Useful commands
 
 ```bash
+make setup
 make ps
 make logs
 make down
 make test
 make web-build
+make check
 ```
 
 ### Manual startup
 
 ```bash
-uv sync
+uv sync --all-extras
 uv run uvicorn detlab.api:app --host 127.0.0.1 --port 8000
 
 cd web
 npm install
-npm test
-npm run build
 npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
@@ -156,6 +157,7 @@ The web app defaults its internal `/api` proxy target to `http://127.0.0.1:8000`
 
 The `/api` root path keeps FastAPI docs and OpenAPI working correctly when the web app proxies local requests.
 The GitHub source settings tell the API which repo directory to sync into the active analysis workspace.
+`make up` waits for both the API and web app to respond before returning.
 
 ## Example Workflow
 

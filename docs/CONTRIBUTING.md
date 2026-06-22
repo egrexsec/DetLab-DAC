@@ -30,9 +30,8 @@ Every contribution should aim to create one or more of the following:
 ```bash
 git clone https://github.com/YOUR_USERNAME/detlab.git
 cd detlab
-python -m venv .venv
-source .venv/bin/activate
-pip install .[dev]
+uv sync --all-extras
+cd web && npm install
 ```
 
 ## Run checks

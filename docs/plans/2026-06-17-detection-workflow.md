@@ -186,7 +186,7 @@ git commit -m "feat: add in-platform detection inspection workflow"
 **Objective:** Prove the feature works end to end in the actual app, not just in unit tests.
 
 **Files:**
-- Verify runtime against existing Docker stack and local app files.
+- Verify runtime against the local FastAPI + Next.js app files.
 
 **Step 1: Run backend and full test suite**
 
@@ -286,4 +286,4 @@ git commit -m "docs: document in-platform detection workflow"
 - [ ] UI renders score, risk, recommendations, and conversion preview
 - [ ] `pytest -q` passes
 - [ ] `cd web && npm run build` passes
-- [ ] live Docker/browser verification succeeds
+- [ ] live local browser verification succeeds

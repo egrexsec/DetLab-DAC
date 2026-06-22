@@ -60,7 +60,7 @@
         <div class="pulse-dot"></div>
         <h1>DetLab-DAC Architecture</h1>
       </div>
-      <p class="subtitle">Detection Engineering Workbench composed of a Typer CLI, FastAPI backend, Next.js dashboard, scoring and ATT&CK analytics engines, reusable detection packs, multi-backend export modules, and a Docker Compose deployment path for fast demo and local evaluation.</p>
+      <p class="subtitle">Detection Engineering Workbench composed of a Typer CLI, FastAPI backend, Next.js dashboard, scoring and ATT&CK analytics engines, reusable detection packs, multi-backend export modules, and a local startup path for fast demo and evaluation.</p>
     </div>
 
     <div class="diagram-container">
@@ -110,7 +110,7 @@
 
         <!-- deployment boundary -->
         <rect x="220" y="60" width="1110" height="760" rx="18" fill="rgba(251, 191, 36, 0.05)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
-        <text x="240" y="84" fill="#fbbf24" font-size="11" font-weight="600">Docker Compose local deployment</text>
+        <text x="240" y="84" fill="#fbbf24" font-size="11" font-weight="600">Local development and demo runtime</text>
 
         <!-- external actor -->
         <rect x="30" y="150" width="115" height="110" rx="8" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
@@ -157,7 +157,7 @@
         <text x="360" y="498" fill="white" font-size="13" font-weight="600" text-anchor="middle">Next.js Dashboard</text>
         <text x="360" y="518" fill="#94a3b8" font-size="9" text-anchor="middle">Overview • Coverage • Scoring</text>
         <text x="360" y="532" fill="#94a3b8" font-size="9" text-anchor="middle">Packs • Reports</text>
-        <text x="360" y="546" fill="#94a3b8" font-size="9" text-anchor="middle">proxy /api → api:8000</text>
+        <text x="360" y="546" fill="#94a3b8" font-size="9" text-anchor="middle">proxy /api → 127.0.0.1:8000</text>
         <text x="360" y="560" fill="#22d3ee" font-size="8" text-anchor="middle">port 3000</text>
 
         <!-- Dashboard payload -->
@@ -261,7 +261,7 @@
           <li>• detection content is loaded from repo YAML</li>
           <li>• CLI and API both exercise the same validation, scoring, and export logic</li>
           <li>• Next.js surfaces the resulting analytics as recruiter-friendly visuals</li>
-          <li>• Docker Compose keeps the demo path fast and reproducible</li>
+          <li>• local startup scripts keep the demo path fast and reproducible</li>
         </ul>
       </div>
       <div class="card">
