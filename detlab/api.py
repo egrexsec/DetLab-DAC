@@ -25,7 +25,10 @@ from detlab.templates import build_detection_templates
 from detlab.validators import load_detection_dir
 
 ROOT_PATH = os.getenv("DETLAB_ROOT_PATH", "")
+REPO_ROOT = Path(__file__).resolve().parent.parent
 MAX_DETECTION_REQUEST_BYTES = 25_000
+ALLOWED_SAVE_ROOTS = ("detections", "knowledge")
+ALLOWED_SAVE_SUFFIXES = {".yml", ".yaml", ".md"}
 
 app = FastAPI(title="DetLab API", version="0.1.0", root_path=ROOT_PATH)
 
@@ -67,9 +70,65 @@ class DetectionConvertRequest(BaseModel):
     target: str = Field(..., min_length=1, max_length=32)
 
 
+class DetectionSaveRequest(BaseModel):
+    path: str = Field(..., min_length=1, max_length=256)
+    content: str = Field(..., min_length=1, max_length=20000)
+
+
 
 def _load_detections(path: str):
     return load_detections(str(resolve_detection_dir(path)))
+
+
+
+def _resolve_repo_save_path(relative_path: str) -> tuple[str, Path]:
+    normalized = relative_path.strip().replace('\\', '/')
+    candidate = Path(normalized)
+
+    if (
+        not normalized
+        or candidate.is_absolute()
+        or '..' in candidate.parts
+        or candidate.parts[0] not in ALLOWED_SAVE_ROOTS
+        or candidate.suffix.lower() not in ALLOWED_SAVE_SUFFIXES
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail='Save path must stay within the DetLab repo and use detections/ or knowledge/',
+        )
+
+    resolved = (REPO_ROOT / candidate).resolve()
+    try:
+        resolved.relative_to(REPO_ROOT.resolve())
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail='Save path must stay within the DetLab repo and use detections/ or knowledge/',
+        ) from exc
+
+    return candidate.as_posix(), resolved
+
+
+
+def _save_repo_content(relative_path: str, content: str) -> dict:
+    inspection = inspect_detection_content(content)
+    if not inspection['valid']:
+        return inspection
+
+    normalized_path, resolved_path = _resolve_repo_save_path(relative_path)
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved_path.write_text(content.rstrip() + '\n', encoding='utf-8')
+
+    return {
+        'saved': True,
+        'path': normalized_path,
+        'repo_root': str(REPO_ROOT),
+        'source_format': inspection.get('source_format'),
+        'normalized_from': inspection.get('normalized_from'),
+        'canonical_model_version': inspection.get('canonical_model_version'),
+        'detection': inspection.get('detection'),
+        'score': inspection.get('score'),
+    }
 
 
 
@@ -228,5 +287,13 @@ def convert_detection(request: DetectionConvertRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if result["valid"]:
+        return result
+    return JSONResponse(status_code=422, content=result)
+
+
+@app.post("/detections/save")
+def save_detection(request: DetectionSaveRequest):
+    result = _save_repo_content(request.path, request.content)
+    if result.get('saved'):
         return result
     return JSONResponse(status_code=422, content=result)

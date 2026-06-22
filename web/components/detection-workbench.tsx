@@ -47,6 +47,12 @@ type ConvertResponse = InspectResponse & {
   content?: string
 }
 
+type SaveResponse = InspectResponse & {
+  saved?: boolean
+  path?: string
+  repo_root?: string
+}
+
 type DetectionTemplateCatalog = {
   canonical_model_version: string
   default_format: string
@@ -173,17 +179,27 @@ const AUTHORING_TABS: AuthoringTab[] = [
   },
 ] as const
 
+const DEFAULT_SAVE_PATHS: Record<(typeof AUTHORING_TABS)[number]['id'], string> = {
+  detection: 'detections/custom/new-detection.yml',
+  investigation: 'knowledge/incident-response-case-studies/new-investigation.md',
+  hunt: 'knowledge/threat-hunts/general/new-threat-hunt.md',
+  learning: 'knowledge/learning-paths/new-learning-path.md',
+}
+
 export default function DetectionWorkbench() {
   const [content, setContent] = useState(SAMPLE_DETECTION_YAML)
   const [target, setTarget] = useState('splunk')
   const [templateCatalog, setTemplateCatalog] = useState<DetectionTemplateCatalog | null>(null)
   const [templateFormat, setTemplateFormat] = useState('yaml')
   const [activeTab, setActiveTab] = useState<(typeof AUTHORING_TABS)[number]['id']>('detection')
+  const [savePath, setSavePath] = useState(DEFAULT_SAVE_PATHS.detection)
   const [inspectResult, setInspectResult] = useState<InspectResponse | null>(null)
   const [convertResult, setConvertResult] = useState<ConvertResponse | null>(null)
+  const [saveResult, setSaveResult] = useState<SaveResponse | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [inspecting, setInspecting] = useState(false)
   const [converting, setConverting] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const recommendations = useMemo(() => inspectResult?.score?.recommendations ?? [], [inspectResult])
 
@@ -220,12 +236,19 @@ export default function DetectionWorkbench() {
     }
   }, [availableTemplates, templateFormat])
 
+  useEffect(() => {
+    setSavePath(DEFAULT_SAVE_PATHS[activeTab])
+    setSaveResult(null)
+    setErrorMessage(null)
+  }, [activeTab])
+
   function loadTemplate(format: string) {
     const template = templateCatalog?.templates[format]
     if (template?.content) {
       setContent(template.content)
       setInspectResult(null)
       setConvertResult(null)
+      setSaveResult(null)
       setErrorMessage(null)
       return
     }
@@ -234,6 +257,7 @@ export default function DetectionWorkbench() {
       setContent(SAMPLE_DETECTION_YAML)
       setInspectResult(null)
       setConvertResult(null)
+      setSaveResult(null)
       setErrorMessage(null)
     }
   }
@@ -282,6 +306,40 @@ export default function DetectionWorkbench() {
       setErrorMessage('The conversion request failed. Check the API service and retry.')
     } finally {
       setConverting(false)
+    }
+  }
+
+  async function saveToRepo() {
+    setSaving(true)
+    setErrorMessage(null)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/detections/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: savePath, content }),
+      })
+      const body: SaveResponse | { detail?: string } = await response.json()
+
+      if (!response.ok) {
+        setSaveResult(null)
+        setErrorMessage('detail' in body && body.detail ? body.detail : 'Save failed. Inspect the content and repo path, then retry.')
+        if ('valid' in body && body.valid === false) {
+          setInspectResult(body)
+        }
+        return
+      }
+
+      const savedBody = body as SaveResponse
+      setSaveResult(savedBody)
+      setInspectResult(savedBody)
+      setConvertResult(null)
+      setErrorMessage(`Saved to ${savedBody.path}`)
+    } catch {
+      setSaveResult(null)
+      setErrorMessage('The save request failed. Check the API service and retry.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -372,9 +430,41 @@ export default function DetectionWorkbench() {
             >
               {inspecting ? 'Inspecting…' : 'Inspect & Score'}
             </button>
+            <button
+              onClick={saveToRepo}
+              disabled={saving}
+              style={{ background: '#14532d', color: '#dcfce7', border: 'none', borderRadius: '10px', padding: '10px 14px', cursor: 'pointer' }}
+            >
+              {saving ? 'Saving…' : 'Save to Repo'}
+            </button>
           </div>
           <div style={{ color: '#94a3b8', fontSize: '0.88rem' }}>
-            DetLab normalizes all tabs into the same workspace model so detections, hunts, and investigations stay reusable.
+            Repo files are the source of truth. Save directly into detections/ or knowledge/.
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gap: '8px', marginTop: '16px' }}>
+          <label htmlFor="save-path" style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+            Repo save path
+          </label>
+          <input
+            id="save-path"
+            value={savePath}
+            onChange={(event) => setSavePath(event.target.value)}
+            spellCheck={false}
+            style={{
+              width: '100%',
+              background: '#020617',
+              color: '#e2e8f0',
+              border: '1px solid #334155',
+              borderRadius: '12px',
+              padding: '12px 14px',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              fontSize: '0.92rem',
+            }}
+          />
+          <div style={{ color: '#64748b', fontSize: '0.8rem' }}>
+            Allowed roots: <code>detections/</code> and <code>knowledge/</code>. Allowed file types: <code>.yml</code>, <code>.yaml</code>, <code>.md</code>.
           </div>
         </div>
 
@@ -397,7 +487,7 @@ export default function DetectionWorkbench() {
           }}
         />
         {errorMessage ? (
-          <div style={{ marginTop: '16px', background: '#3f0d16', border: '1px solid #7f1d1d', color: '#fecaca', borderRadius: '12px', padding: '12px 14px' }}>
+          <div style={{ marginTop: '16px', background: errorMessage.startsWith('Saved to ') ? '#052e16' : '#3f0d16', border: errorMessage.startsWith('Saved to ') ? '1px solid #166534' : '1px solid #7f1d1d', color: errorMessage.startsWith('Saved to ') ? '#bbf7d0' : '#fecaca', borderRadius: '12px', padding: '12px 14px' }}>
             {errorMessage}
           </div>
         ) : null}
@@ -479,6 +569,11 @@ export default function DetectionWorkbench() {
 
           <div style={{ marginTop: '16px' }}>
             <div style={{ color: '#94a3b8', fontSize: '0.86rem', marginBottom: '8px' }}>Recommendations</div>
+            {saveResult?.saved ? (
+              <div style={{ background: '#052e16', border: '1px solid #166534', color: '#bbf7d0', borderRadius: '12px', padding: '12px 14px', marginBottom: '12px' }}>
+                Saved to <code>{saveResult.path}</code> under <code>{saveResult.repo_root}</code>
+              </div>
+            ) : null}
             {recommendations.length > 0 ? (
               <ul style={{ marginTop: 0 }}>
                 {recommendations.map((recommendation) => (

@@ -180,9 +180,11 @@ detlab convert detections/windows/encoded_powershell.yml --target splunk --outpu
 2. Use the catalog tabs to pivot between **Detections**, **Investigations**, **Threat Hunts**, and **Learning Paths**
 3. Open **Workbench**
 4. Load or paste content for the lane you want to author
-5. Click **Inspect & Score** to validate and score it
-6. Choose `Splunk`, `Sigma`, `KQL`, or `EQL`
-7. Click **Preview Conversion** to render backend output in-place
+5. Set a repo path under `detections/` or `knowledge/`
+6. Click **Save to Repo** to persist the authored artifact into the repository
+7. Click **Inspect & Score** to validate and score it
+8. Choose `Splunk`, `Sigma`, `KQL`, or `EQL`
+9. Click **Preview Conversion** to render backend output in-place
 
 ## Sample Detection Packs
 

@@ -1,4 +1,5 @@
 import importlib
+from pathlib import Path
 
 import yaml
 from fastapi.testclient import TestClient
@@ -297,3 +298,45 @@ def test_inspect_detection_endpoint_rejects_nested_selection_values():
     body = response.json()
     assert body['valid'] is False
     assert body['errors']
+
+
+
+def test_save_detection_endpoint_writes_valid_content_into_repo(tmp_path, monkeypatch):
+    repo_root = tmp_path / 'repo'
+    repo_root.mkdir()
+    monkeypatch.setattr(api_module, 'REPO_ROOT', repo_root)
+
+    response = client.post(
+        '/detections/save',
+        json={
+            'path': 'knowledge/threat-hunts/aws/unapproved-iam-user-creation.md',
+            'content': SAMPLE_DETECTION_YAML.replace('DET-9001', 'DET-9555'),
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    saved_path = repo_root / 'knowledge/threat-hunts/aws/unapproved-iam-user-creation.md'
+    assert saved_path.exists()
+    assert saved_path.read_text(encoding='utf-8').startswith('id: DET-9555')
+    assert body['saved'] is True
+    assert body['path'] == 'knowledge/threat-hunts/aws/unapproved-iam-user-creation.md'
+    assert body['repo_root'] == str(repo_root)
+
+
+
+def test_save_detection_endpoint_rejects_repo_escape_paths(tmp_path, monkeypatch):
+    repo_root = tmp_path / 'repo'
+    repo_root.mkdir()
+    monkeypatch.setattr(api_module, 'REPO_ROOT', repo_root)
+
+    response = client.post(
+        '/detections/save',
+        json={
+            'path': '../outside.md',
+            'content': SAMPLE_DETECTION_YAML,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()['detail'] == 'Save path must stay within the DetLab repo and use detections/ or knowledge/'
