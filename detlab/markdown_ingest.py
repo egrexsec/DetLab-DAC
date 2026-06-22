@@ -43,25 +43,87 @@ TACTIC_KEYWORDS = {
 
 
 SECTION_ALIASES = {
-    "data_sources": {"focus areas", "data tables", "data sources"},
-    "triage_steps": {"triage guidance", "triage", "initial alert"},
+    "data_sources": {
+        "focus areas",
+        "data tables",
+        "data sources",
+        "environment",
+        "aws services",
+        "tools used",
+        "cloud evidence",
+        "cloudtrail analysis",
+        "iam analysis",
+        "s3 analysis",
+    },
+    "triage_steps": {
+        "triage guidance",
+        "triage",
+        "initial alert",
+        "objective",
+        "hunt hypothesis",
+        "discovery process",
+        "initial indicators",
+    },
     "investigation_steps": {
         "investigation steps",
         "investigation workflow",
+        "investigation process",
         "analysis",
         "evidence collected",
         "timeline",
         "detection opportunities",
         "investigative value",
+        "walkthrough",
+        "findings",
+        "lessons learned",
+        "real-world application",
+        "detection engineering opportunities",
+        "threat hunting opportunities",
+        "response workflow",
     },
-    "falsepositives": {"false positives"},
-    "artifacts": {"evidence collected", "important fields", "artifacts"},
-    "response_actions": {"containment actions", "response actions", "incident response actions"},
-    "escalation_guidance": {"lessons learned", "root cause"},
+    "falsepositives": {"false positives", "mistakes made", "common misconfigurations"},
+    "artifacts": {
+        "evidence collected",
+        "important fields",
+        "artifacts",
+        "evidence",
+        "logs",
+        "cloud evidence",
+    },
+    "response_actions": {
+        "containment actions",
+        "response actions",
+        "incident response actions",
+        "eradication actions",
+        "recovery actions",
+        "defensive recommendations",
+        "defensive improvements",
+        "recommendations",
+    },
+    "escalation_guidance": {
+        "lessons learned",
+        "root cause",
+        "root cause analysis",
+        "impact assessment",
+        "future detection opportunities",
+        "follow-up hunts",
+        "defensive recommendations",
+        "best practices",
+        "key exam concepts",
+    },
     "velociraptor_artifacts": {"velociraptor artifacts"},
-    "related_detections": {"related detections"},
-    "related_hunts": {"related hunts"},
-    "cloud_telemetry": {"cloud telemetry", "logs reviewed", "aws services used"},
+    "related_detections": {"related detections", "detection opportunities", "future detection opportunities"},
+    "related_hunts": {"related hunts", "threat hunting opportunities", "follow-up hunts"},
+    "cloud_telemetry": {
+        "cloud telemetry",
+        "logs reviewed",
+        "aws services used",
+        "investigation workflow",
+        "cloudtrail analysis",
+        "iam analysis",
+        "s3 analysis",
+        "real-world usage",
+    },
 }
 
 
@@ -350,7 +412,7 @@ def _extract_description(body: str, sections: dict[str, str]) -> str:
 
 
 def _extract_query_block(sections: dict[str, str]) -> tuple[str | None, str | None]:
-    for key in ("query", "detection logic"):
+    for key in ("query", "queries", "detection logic", "hunt methodology"):
         content = sections.get(key)
         if not content:
             continue
@@ -376,7 +438,18 @@ def _should_skip_markdown_file(
         return False
     if query_text:
         return False
-    if any(key in sections for key in ("triage guidance", "investigation steps", "artifacts", "false positives")):
+    if any(
+        key in sections
+        for key in (
+            "triage guidance",
+            "investigation steps",
+            "artifacts",
+            "false positives",
+            "hunt hypothesis",
+            "walkthrough",
+            "evidence collected",
+        )
+    ):
         return False
     return file_path.name.lower() == "readme.md"
 
@@ -399,8 +472,20 @@ def _infer_tactic_from_path(file_path: Path) -> str | None:
 
 def _infer_source_attributes(file_path: Path) -> tuple[str, str, list[str], list[str]]:
     lowered = [part.lower() for part in file_path.parts]
+    if "flaws-cloud" in lowered or "flaws2-cloud" in lowered:
+        return "aws", "cloudtrail", ["cloud"], ["aws"]
     if "aws" in lowered:
         return "aws", "cloudtrail", ["cloud"], ["aws"]
+    if "learning-paths" in lowered:
+        return "markdown", "learning_path", ["endpoint"], ["markdown"]
+    if "labs" in lowered:
+        return "markdown", "lab", ["endpoint"], ["markdown"]
+    if "incident-response" in lowered or "incident-response-case-studies" in lowered:
+        return "markdown", "incident_response", ["endpoint"], ["markdown"]
+    if "threat-hunts" in lowered:
+        return "markdown", "threat_hunt", ["endpoint"], ["markdown"]
+    if "detection-engineering" in lowered:
+        return "markdown", "detection_engineering", ["endpoint"], ["markdown"]
     if "velociraptor" in lowered:
         return "windows", "velociraptor", ["endpoint"], ["windows"]
     if "mde" in lowered:
@@ -411,6 +496,22 @@ def _infer_source_attributes(file_path: Path) -> tuple[str, str, list[str], list
 
 def _infer_content_kind(file_path: Path) -> str:
     lowered = [part.lower() for part in file_path.parts]
+    if "learning-paths" in lowered:
+        return "learning_path"
+    if "labs" in lowered:
+        return "lab"
+    if "incident-response" in lowered or "incident-response-case-studies" in lowered:
+        return "incident_response"
+    if "forensics" in lowered:
+        return "forensics"
+    if "threat-hunts" in lowered:
+        return "hunt"
+    if "detection-engineering" in lowered:
+        return "detection"
+    if "aws-security-learning" in lowered:
+        return "learning_path"
+    if "flaws-cloud" in lowered or "flaws2-cloud" in lowered:
+        return "investigation"
     if "velociraptor" in lowered:
         return "artifact"
     if "aws" in lowered:

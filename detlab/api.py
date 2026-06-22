@@ -20,7 +20,7 @@ from detlab.processing import (
     inspect_detection_content,
 )
 from detlab.scoring import generate_score_report
-from detlab.sources import describe_detection_source, resolve_detection_dir
+from detlab.sources import resolve_and_describe_detection_source, resolve_detection_dir
 from detlab.templates import build_detection_templates
 from detlab.validators import load_detection_dir
 
@@ -103,16 +103,15 @@ def _build_review_queue(analytics_data: dict, score_data: list[dict]) -> dict:
 
 
 def _build_dashboard_payload(path: str = "detections") -> dict:
-    resolved_path = resolve_detection_dir(path)
+    resolved_path, source_status = resolve_and_describe_detection_source(path)
     yaml_files, yaml_valid, yaml_errors = load_detection_dir(Path(resolved_path))
     markdown_files, markdown_valid, markdown_errors = validate_markdown_detection_dir(resolved_path)
     files = sorted({*yaml_files, *markdown_files})
     valid = yaml_valid and markdown_valid
     errors = {**yaml_errors, **markdown_errors}
-    detections = _load_detections(str(resolved_path))
+    detections = load_detections(str(resolved_path))
     analytics_data = generate_analytics(detections)
     score_data = generate_score_report(detections)
-    source_status = describe_detection_source(path)
 
     return {
         "summary": {
@@ -181,7 +180,8 @@ def score(path: str = "detections"):
 
 @app.get("/source")
 def source(path: str = "detections"):
-    return describe_detection_source(path)
+    _, source_status = resolve_and_describe_detection_source(path)
+    return source_status
 
 
 @app.get("/dashboard")

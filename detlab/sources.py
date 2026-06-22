@@ -202,3 +202,63 @@ def describe_detection_source(path: str | Path = DEFAULT_SOURCE_SUBDIR) -> dict[
         "resolved_path": str(candidate),
         "synced": False,
     }
+
+
+def resolve_and_describe_detection_source(
+    path: str | Path = DEFAULT_SOURCE_SUBDIR,
+    cache_root: Path = DEFAULT_CACHE_ROOT,
+) -> tuple[Path, dict[str, str | bool | None]]:
+    env_source = source_from_environment()
+    normalized_path = str(path)
+    resolved_path = resolve_detection_dir(path, cache_root)
+
+    if env_source and normalized_path in {".", "", DEFAULT_SOURCE_SUBDIR}:
+        return resolved_path, {
+            "mode": env_source.mode,
+            "repo_url": env_source.repo_url,
+            "ref": env_source.ref,
+            "subdir": env_source.subdir,
+            "resolved_path": str(resolved_path.resolve()),
+            "synced": True,
+        }
+
+    candidate = Path(path)
+    if candidate.exists():
+        return resolved_path, {
+            "mode": "local",
+            "repo_url": None,
+            "ref": None,
+            "subdir": str(candidate),
+            "resolved_path": str(resolved_path.resolve()),
+            "synced": False,
+        }
+
+    if isinstance(path, str) and path.startswith(GITHUB_SPEC_PREFIX):
+        source = parse_github_source_spec(path)
+        return resolved_path, {
+            "mode": source.mode,
+            "repo_url": source.repo_url,
+            "ref": source.ref,
+            "subdir": source.subdir,
+            "resolved_path": str(resolved_path.resolve()),
+            "synced": True,
+        }
+
+    if env_source:
+        return resolved_path, {
+            "mode": env_source.mode,
+            "repo_url": env_source.repo_url,
+            "ref": env_source.ref,
+            "subdir": normalized_path,
+            "resolved_path": str(resolved_path.resolve()),
+            "synced": True,
+        }
+
+    return resolved_path, {
+        "mode": "local",
+        "repo_url": None,
+        "ref": None,
+        "subdir": str(candidate),
+        "resolved_path": str(resolved_path),
+        "synced": False,
+    }

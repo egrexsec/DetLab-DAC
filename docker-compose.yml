@@ -15,6 +15,8 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
+    environment:
+      DETLAB_INTERNAL_API_ORIGIN: http://api:8000
     ports:
       - '3000:3000'
     depends_on:

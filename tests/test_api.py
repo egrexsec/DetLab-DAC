@@ -63,6 +63,35 @@ def test_dashboard_endpoint_exposes_workbench_sections():
     assert body['summary']['total_detections'] >= 1
 
 
+def test_build_dashboard_payload_uses_resolve_and_describe_detection_source_once(monkeypatch, tmp_path):
+    detection_dir = tmp_path / 'detections'
+    detection_dir.mkdir()
+    calls = {'count': 0}
+
+    def fake_resolve_and_describe(path='detections'):
+        calls['count'] += 1
+        return detection_dir, {
+            'mode': 'github',
+            'repo_url': 'https://github.com/example/repo.git',
+            'ref': 'main',
+            'subdir': 'detections',
+            'resolved_path': str(detection_dir),
+            'synced': True,
+        }
+
+    monkeypatch.setattr(api_module, 'resolve_and_describe_detection_source', fake_resolve_and_describe)
+    monkeypatch.setattr(api_module, 'load_detection_dir', lambda _path: ([], True, {}))
+    monkeypatch.setattr(api_module, 'validate_markdown_detection_dir', lambda _path: ([], True, {}))
+    monkeypatch.setattr(api_module, '_load_detections', lambda _path: [])
+    monkeypatch.setattr(api_module, 'generate_analytics', lambda _detections: {})
+    monkeypatch.setattr(api_module, 'generate_score_report', lambda _detections: [])
+
+    payload = api_module._build_dashboard_payload('github://example/repo/detections?ref=main')
+
+    assert calls['count'] == 1
+    assert payload['source']['mode'] == 'github'
+
+
 
 def test_source_endpoint_returns_local_detection_directory_metadata():
     response = client.get('/source')
@@ -191,11 +220,19 @@ def test_detection_templates_endpoint_returns_generic_authoring_templates():
     assert body['canonical_model_version']
     assert 'yaml' in body['templates']
     assert 'markdown' in body['templates']
+    assert 'learning_path' in body['templates']
+    assert 'lab' in body['templates']
+    assert 'incident_response' in body['templates']
+    assert 'threat_hunt' in body['templates']
+    assert 'detection_engineering' in body['templates']
+    assert 'aws_security_learning' in body['templates']
+    assert 'flaws_cloud' in body['templates']
     assert 'sigma' in body['templates']
     assert 'splunk' in body['templates']
     assert 'kql' in body['templates']
     assert 'eql' in body['templates']
     assert 'Detects suspicious PowerShell' in body['templates']['yaml']['content']
+    assert 'Learn → Lab → Investigate → Detect → Hunt → Document → Publish' in body['templates']['learning_path']['content']
 
 
 

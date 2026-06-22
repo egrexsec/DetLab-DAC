@@ -463,7 +463,7 @@ export default function HomePage() {
         <Header />
 
         <nav style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '24px', marginBottom: '28px' }}>
-          {['Detection Workspace', 'Coverage Overview', 'Score Review', 'Repository Source', 'Workbench'].map((item) => (
+          {['Detection Workspace', 'Documentation Framework', 'Coverage Overview', 'Score Review', 'Repository Source', 'Workbench'].map((item) => (
             <a
               key={item}
               href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
@@ -487,6 +487,40 @@ export default function HomePage() {
           <p style={{ color: '#94a3b8', maxWidth: '900px' }}>
             Start from a detection, not a technique. Select a detection to see ATT&CK context, investigation guidance, DFIR artifacts, cloud telemetry, relationships, and response actions in one place.
           </p>
+
+          <div
+            id="documentation-framework"
+            style={{
+              ...cardStyle,
+              marginTop: '16px',
+              marginBottom: '16px',
+              display: 'grid',
+              gap: '16px',
+            }}
+          >
+            <div>
+              <h3 style={{ marginTop: 0, marginBottom: '8px' }}>Documentation Framework</h3>
+              <p style={{ color: '#94a3b8', marginBottom: 0, maxWidth: '980px' }}>
+                Every DetLab activity should become a reusable artifact. The standard workflow is Learn → Lab → Investigate → Detect → Hunt → Document → Publish.
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px' }}>
+              {[
+                'Learning paths',
+                'Labs',
+                'Incident response case studies',
+                'Threat hunts',
+                'Detection engineering',
+                'AWS security learning',
+                'flaws.cloud case studies',
+                'Portfolio-ready artifacts',
+              ].map((item) => (
+                <div key={item} style={{ background: '#111827', border: '1px solid #334155', borderRadius: '12px', padding: '12px' }}>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.6fr', gap: '16px', alignItems: 'start', marginTop: '16px' }}>
             <div style={cardStyle}>
@@ -928,11 +962,11 @@ function Header() {
   return (
     <>
       <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>
-        Visual Detection Engineering, Threat Hunting & DFIR
+        Detection Engineering, Threat Hunting, DFIR & Documentation
       </div>
       <h1 style={{ fontSize: '3rem', margin: '12px 0 8px' }}>DetLab</h1>
       <p style={{ color: '#94a3b8', fontSize: '1.1rem', maxWidth: '880px' }}>
-        A detection-first knowledge platform: pick a detection, understand what it means, see the ATT&CK context, collect the right evidence, and pivot into related investigations.
+        A detection-first knowledge platform: build detections, document labs and investigations, pivot through ATT&CK context, collect the right evidence, and publish reusable security artifacts.
       </p>
     </>
   )

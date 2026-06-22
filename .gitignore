@@ -11,3 +11,4 @@ reports/*.md
 .env
 web/node_modules/
 web/.next/
+.hermes/

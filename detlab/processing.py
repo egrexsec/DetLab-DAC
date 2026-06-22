@@ -355,6 +355,26 @@ def _validate_conversion_safe_values(detection: Detection) -> list[dict[str, Any
     return errors
 
 
+def detection_metadata_tags(detection: Detection) -> list[str]:
+    tags: set[str] = set()
+    for domain in detection.domain:
+        tags.add(f"domain:{domain}")
+    for platform in detection.platforms:
+        tags.add(f"platform:{platform}")
+
+    selection = detection.detection.selection
+    source_path = selection.get("SourcePath")
+    source_format = selection.get("SourceFormat")
+    normalized_from = selection.get("NormalizedFrom")
+    if source_path:
+        tags.add(f"source_path:{source_path}")
+    if source_format:
+        tags.add(f"source_format:{source_format}")
+    if normalized_from:
+        tags.add(f"normalized_from:{normalized_from}")
+    return sorted(tags)
+
+
 def inspect_detection_content(content: str) -> dict[str, Any]:
     metadata = _processing_metadata(content)
     try:

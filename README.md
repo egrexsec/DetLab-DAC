@@ -2,7 +2,7 @@
 
 Detection-First Visual Detection Engineering, Threat Hunting & DFIR Platform
 
-Build, validate, score, convert, test, and visually explore detections from a single platform.
+Build, validate, score, convert, test, visually explore, and document detections and investigations from a single platform.
 
 DetLab is built for detection engineers, threat hunters, SOC analysts, DFIR analysts, and security engineers who want a practical way to improve a detection library without standing up a heavy governance platform.
 
@@ -97,7 +97,30 @@ The current default source is:
 - ref: `main`
 - subdir: `mde/advanced-hunting`
 
-### 6. In-Platform Detection Workspace
+### 6. DetLab Knowledge Management & Documentation Framework
+
+DetLab is not just for detections. It is also the documentation framework that turns learning and investigations into reusable portfolio artifacts.
+
+Core workflow:
+- **Learn → Lab → Investigate → Detect → Hunt → Document → Publish**
+
+Built-in documentation lanes:
+- learning paths
+- labs
+- incident response case studies
+- threat hunts
+- detection engineering references
+- AWS security learning notes
+- flaws.cloud and flaws2.cloud case studies
+
+Authoring support:
+- repo structure under `knowledge/`
+- reusable templates exposed through `/detections/templates`
+- markdown ingestion that can normalize structured knowledge entries into the DetLab workspace
+
+See `docs/knowledge-management-framework.md` for the full standard.
+
+### 7. In-Platform Detection Workspace
 
 Select a detection directly in the web UI and pivot through the investigation workflow without leaving the page.
 
@@ -190,6 +213,22 @@ Open:
 ### What starts
 - `web` → Next.js workbench UI on port `3000`
 - `api` → FastAPI backend behind the `/api` proxy path
+
+### Local website-only smoke test
+
+If you want to run the website outside Docker as a quick test:
+
+```bash
+./.venv/bin/uvicorn detlab.api:app --host 0.0.0.0 --port 8000
+cd web
+npm install
+npm test
+npm run build
+npm run start -- --hostname 0.0.0.0 --port 3000
+```
+
+The web app now defaults its internal `/api` proxy target to `http://127.0.0.1:8000` for local runs.
+For container networking, set `DETLAB_INTERNAL_API_ORIGIN=http://api:8000`.
 
 ### Environment defaults
 
