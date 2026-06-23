@@ -69,6 +69,20 @@ export function buildWorkbenchEditHref(item) {
   return `/?${params.toString()}#workbench`
 }
 
+export function buildWorkbenchCreateHref(slug) {
+  const tabBySlug = {
+    'threat-hunts': 'hunt',
+    investigations: 'investigation',
+    'forensic-writeups': 'investigation',
+    'learning-paths': 'learning',
+  }
+
+  const params = new URLSearchParams({
+    tab: tabBySlug[slug] ?? 'detection',
+  })
+  return `/?${params.toString()}#workbench`
+}
+
 export function buildContentIndexCards(payload) {
   return CONTENT_INDEX_DEFINITIONS.map((entry) => ({
     ...entry,

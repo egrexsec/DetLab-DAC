@@ -337,6 +337,11 @@ export default function DetectionWorkbench() {
     }
 
     const params = new URLSearchParams(window.location.search)
+    const requestedTab = params.get('tab')
+    if (isWorkbenchTabId(requestedTab)) {
+      setActiveTab(requestedTab)
+    }
+
     const editPath = params.get('edit')
     if (!editPath) {
       return
@@ -346,7 +351,6 @@ export default function DetectionWorkbench() {
       setLoadingEditContent(true)
       setErrorMessage(null)
       try {
-        const requestedTab = params.get('tab')
         const response = await fetch(`${API_BASE_URL}/repo/content?path=${encodeURIComponent(editPath)}`)
         const body: RepoContentResponse | { detail?: string } = await response.json()
         if (!response.ok) {

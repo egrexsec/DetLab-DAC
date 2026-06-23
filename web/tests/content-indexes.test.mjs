@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   CONTENT_INDEX_DEFINITIONS,
   buildContentIndexCards,
+  buildWorkbenchCreateHref,
   buildWorkbenchEditHref,
   getContentIndexNavigation,
 } from '../config/content-indexes.mjs'
@@ -66,4 +67,11 @@ test('buildWorkbenchEditHref deep-links indexed content into the workbench edito
     buildWorkbenchEditHref({ path: 'learning-paths/aws/iam-foundations.md', content_kind: 'learning_path' }),
     '/?edit=knowledge%2Flearning-paths%2Faws%2Fiam-foundations.md&tab=learning#workbench',
   )
+})
+
+test('buildWorkbenchCreateHref deep-links each index into the correct new-artifact tab', () => {
+  assert.equal(buildWorkbenchCreateHref('threat-hunts'), '/?tab=hunt#workbench')
+  assert.equal(buildWorkbenchCreateHref('investigations'), '/?tab=investigation#workbench')
+  assert.equal(buildWorkbenchCreateHref('forensic-writeups'), '/?tab=investigation#workbench')
+  assert.equal(buildWorkbenchCreateHref('learning-paths'), '/?tab=learning#workbench')
 })

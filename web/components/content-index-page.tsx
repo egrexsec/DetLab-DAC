@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { buildContentIndexCards, buildWorkbenchEditHref, getContentIndexDefinition, getContentIndexNavigation } from '../config/content-indexes.mjs'
+import { buildContentIndexCards, buildWorkbenchCreateHref, buildWorkbenchEditHref, getContentIndexDefinition, getContentIndexNavigation } from '../config/content-indexes.mjs'
 
 type ContentItem = {
   id: string
@@ -91,27 +91,35 @@ export default function ContentIndexPage({ slug }: { slug: string }) {
           </Link>
         </div>
 
-        <nav style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          {navigation.map((entry) => {
-            const active = entry.slug === slug
-            return (
-              <Link
-                key={entry.slug}
-                href={entry.href}
-                style={{
-                  background: active ? '#0f172a' : '#111827',
-                  color: active ? '#e0f2fe' : '#cbd5e1',
-                  border: active ? '1px solid #38bdf8' : '1px solid #334155',
-                  borderRadius: '999px',
-                  padding: '10px 14px',
-                  textDecoration: 'none',
-                }}
-              >
-                {entry.title}
-              </Link>
-            )
-          })}
-        </nav>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <nav style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {navigation.map((entry) => {
+              const active = entry.slug === slug
+              return (
+                <Link
+                  key={entry.slug}
+                  href={entry.href}
+                  style={{
+                    background: active ? '#0f172a' : '#111827',
+                    color: active ? '#e0f2fe' : '#cbd5e1',
+                    border: active ? '1px solid #38bdf8' : '1px solid #334155',
+                    borderRadius: '999px',
+                    padding: '10px 14px',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {entry.title}
+                </Link>
+              )
+            })}
+          </nav>
+          <Link
+            href={buildWorkbenchCreateHref(slug)}
+            style={{ background: '#0f766e', color: '#ccfbf1', textDecoration: 'none', border: '1px solid #14b8a6', borderRadius: '999px', padding: '10px 14px', fontWeight: 700 }}
+          >
+            New in workbench
+          </Link>
+        </div>
 
         <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px' }}>
           {loading ? <div>Loading content index…</div> : null}
@@ -159,7 +167,17 @@ export default function ContentIndexPage({ slug }: { slug: string }) {
                   ))}
                 </div>
               ) : (
-                <div style={{ color: '#94a3b8' }}>{current.emptyState}</div>
+                <div style={{ color: '#94a3b8', display: 'grid', gap: '12px' }}>
+                  <div>{current.emptyState}</div>
+                  <div>
+                    <Link
+                      href={buildWorkbenchCreateHref(slug)}
+                      style={{ display: 'inline-flex', background: '#0f766e', color: '#ccfbf1', textDecoration: 'none', border: '1px solid #14b8a6', borderRadius: '10px', padding: '9px 12px', fontWeight: 700 }}
+                    >
+                      Start a new artifact in the workbench
+                    </Link>
+                  </div>
+                </div>
               )}
             </div>
           ) : null}
