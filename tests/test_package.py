@@ -6,40 +6,29 @@ import tomllib
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_project_metadata_exists():
-    pyproject = ROOT / "pyproject.toml"
-
-    assert pyproject.exists()
-
-    with pyproject.open("rb") as handle:
-        data = tomllib.load(handle)
-
-    project = data["project"]
-
-    assert project["name"] == "detlab"
-    assert project["version"]
-    assert project["requires-python"] == ">=3.11"
-
-
-def test_project_urls_exist():
+def test_pyproject_is_repo_runtime_metadata_not_packaging_metadata():
     pyproject = ROOT / "pyproject.toml"
 
     with pyproject.open("rb") as handle:
         data = tomllib.load(handle)
 
-    urls = data["project"]["urls"]
+    assert "build-system" not in data
+    assert data["tool"]["uv"]["package"] is False
+    assert "scripts" not in data["project"]
 
-    assert "Homepage" in urls
-    assert "Repository" in urls
-    assert "Issues" in urls
+    dev_deps = data["project"]["optional-dependencies"]["dev"]
+    assert "build>=1.2.0" not in dev_deps
+    assert "twine>=5.0.0" not in dev_deps
 
 
-def test_console_script_exists():
-    pyproject = ROOT / "pyproject.toml"
+def test_release_workflow_is_removed_for_website_first_repo():
+    assert not (ROOT / ".github" / "workflows" / "release.yml").exists()
 
-    with pyproject.open("rb") as handle:
-        data = tomllib.load(handle)
 
-    scripts = data["project"]["scripts"]
+def test_ci_installs_repo_dependencies_without_editable_package_install():
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-    assert scripts["detlab"] == "detlab.main:app"
+    assert "astral-sh/setup-uv" in workflow
+    assert "uv sync --all-extras" in workflow
+    assert "pip install -e .[dev]" not in workflow
+    assert "python -m build" not in workflow

@@ -236,7 +236,6 @@ git commit -m "test: verify in-platform detection workflow end to end"
 
 **Files:**
 - Modify: `README.md`
-- Optional modify: `docs/workbench-pivot.md`
 
 **Step 1: Write failing documentation expectation**
 
@@ -262,7 +261,7 @@ Run:
 
 ```bash
 cd /root/repo-audit/DetLab-DAC
-git add README.md docs/workbench-pivot.md
+git add README.md
 git commit -m "docs: document in-platform detection workflow"
 ```
 

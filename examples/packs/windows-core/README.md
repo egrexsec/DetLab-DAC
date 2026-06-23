@@ -3,9 +3,7 @@
 Baseline Windows endpoint detections for common process, security, and execution telemetry.
 
 ## Example use
-```bash
-detlab pack-report examples/packs/windows-core
-```
+Open the local DetLab website and review this pack through the Packs and workspace views after running `make up`.
 
 ## Included detections
 - `encoded_powershell.yml`

@@ -3,9 +3,7 @@
 Focused pack for high-signal PowerShell execution and download activity.
 
 ## Example use
-```bash
-detlab pack-report examples/packs/powershell
-```
+Open the local DetLab website and review this pack through the Packs and workspace views after running `make up`.
 
 ## Included detections
 - `windows-powershell-download.yml`
