@@ -12,38 +12,29 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  validate:
+  website:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: web
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
-          python-version: "3.11"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v6
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
 
       - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Lint
-        run: uv run ruff check .
+        run: npm ci
 
       - name: Run tests
-        run: uv run pytest
+        run: npm test
 
-      - name: Validate detections
-        run: uv run python -m detlab.main validate detections
-
-      - name: Generate report
-        run: uv run python -m detlab.main report detections --format markdown --output reports/coverage.md
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v7
-        with:
-          name: detlab-coverage-report
-          path: reports/coverage.md
+      - name: Build website
+        run: npm run build

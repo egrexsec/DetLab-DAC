@@ -1,22 +1,45 @@
 import Link from 'next/link'
-import { getContentIndexNavigation } from '../../config/content-indexes.mjs'
+import { contentLanes } from '../../data/site-content.mjs'
 
 export default function ContentLandingPage() {
-  const navigation = getContentIndexNavigation()
-
   return (
-    <main style={{ minHeight: '100vh', background: '#020617', color: '#e2e8f0', padding: '32px' }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gap: '20px' }}>
-        <div>
-          <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>DetLab Content</div>
-          <h1 style={{ marginBottom: '8px' }}>Knowledge Indexes</h1>
-          <p style={{ color: '#94a3b8', margin: 0 }}>Browse the DetLab knowledge library by artifact type: hunts, investigations, forensic writeups, and learning paths.</p>
+    <main style={{ minHeight: '100vh', padding: '40px 24px 80px', background: '#020617', color: '#e2e8f0' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gap: '24px' }}>
+        <div style={{ display: 'grid', gap: '10px' }}>
+          <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>
+            DetLab Content
+          </div>
+          <h1 style={{ margin: 0 }}>Website lanes</h1>
+          <p style={{ color: '#94a3b8', margin: 0, lineHeight: 1.7 }}>
+            DetLab is organized as a website, not an in-browser authoring tool. Each lane below is meant to publish security work clearly today and
+            support a future self-hostable template tomorrow.
+          </p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
-          {navigation.map((entry) => (
-            <Link key={entry.slug} href={entry.href} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px', color: '#e2e8f0', textDecoration: 'none' }}>
-              <h2 style={{ marginTop: 0 }}>{entry.title}</h2>
-              <p style={{ color: '#94a3b8', marginBottom: 0 }}>{entry.description}</p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+          {contentLanes.map((lane) => (
+            <Link
+              key={lane.slug}
+              href={`/content/${lane.slug}`}
+              style={{
+                background: '#0f172a',
+                border: '1px solid #1e293b',
+                borderRadius: '18px',
+                padding: '20px',
+                color: '#e2e8f0',
+                textDecoration: 'none',
+                display: 'grid',
+                gap: '12px',
+              }}
+            >
+              <div style={{ color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.12em' }}>
+                {lane.shortTitle}
+              </div>
+              <h2 style={{ margin: 0 }}>{lane.title}</h2>
+              <p style={{ margin: 0, color: '#94a3b8', lineHeight: 1.6 }}>{lane.description}</p>
+              <div style={{ color: '#cbd5e1', fontSize: '0.92rem' }}>
+                <strong>Repository area:</strong> {lane.repositoryArea}
+              </div>
             </Link>
           ))}
         </div>

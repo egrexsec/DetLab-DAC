@@ -1,34 +1,20 @@
 SHELL := /bin/bash
 
-.PHONY: setup up down restart logs ps test api-test web-build check
+.PHONY: setup dev build start test check
 
 setup:
-	uv sync --all-extras
 	cd web && npm install
 
-up:
-	./scripts/start.sh
+dev:
+	cd web && npm run dev
 
-down:
-	./scripts/stop.sh
-
-restart: down up
-
-logs:
-	@mkdir -p .detlab-run
-	tail -f .detlab-run/api.log .detlab-run/web.log
-
-ps:
-	@bash -lc 'for svc in api web; do pidfile=.detlab-run/$$svc.pid; if [[ -f $$pidfile ]] && kill -0 $$(cat $$pidfile) >/dev/null 2>&1; then echo "$$svc: running (PID $$(cat $$pidfile))"; else echo "$$svc: stopped"; fi; done'
-
-test:
-	uv run pytest
-
-api-test:
-	curl -fsS http://127.0.0.1:8000/health && echo
-	curl -fsS http://127.0.0.1:8000/dashboard | python3 -m json.tool >/dev/null
-
-web-build:
+build:
 	cd web && npm run build
 
-check: test api-test web-build
+start:
+	cd web && npm run start
+
+test:
+	cd web && npm test
+
+check: test build

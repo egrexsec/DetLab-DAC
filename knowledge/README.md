@@ -14,7 +14,7 @@ DetLab documentation is not optional polish. It is part of the deliverable.
 - `labs/` — hands-on exercises, validation work, and technical experimentation
 - `incident-response-case-studies/` — investigations documented like real incidents
 - `threat-hunts/` — proactive hunting workflows, hypotheses, and findings
-- `detection-engineering/` — reusable detections and conversion-ready logic
+- `detection-engineering/` — reusable detections and detection notes
 - `aws-security-learning/` — AWS security study notes with defender context
 - `flaws-cloud/` — flaws.cloud case studies
 - `flaws2-cloud/` — flaws2.cloud case studies
@@ -45,4 +45,4 @@ Every entry should explain:
 
 ## Template rule
 
-Start with the matching DetLab template from the workbench or `/detections/templates`, then tailor it to the activity instead of inventing a new structure from scratch.
+Start with the matching DetLab lane and structure from the website and repository folders, then tailor it to the activity instead of inventing a brand-new format each time.

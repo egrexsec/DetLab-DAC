@@ -1,2 +1,0 @@
-include alembic.ini
-recursive-include alembic *

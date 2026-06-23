@@ -1,6 +1,0 @@
-alembic
-fastapi
-httpx
-psycopg[binary]
-SQLAlchemy
-uvicorn[standard]
