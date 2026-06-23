@@ -2,9 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const pagePath = path.resolve('/root/repo-audit/DetLab-DAC/web/app/page.tsx')
-const contentRoutePath = path.resolve('/root/repo-audit/DetLab-DAC/web/app/content/[slug]/page.tsx')
+const testDir = path.dirname(fileURLToPath(import.meta.url))
+const pagePath = path.resolve(testDir, '../app/page.tsx')
+const contentRoutePath = path.resolve(testDir, '../app/content/[slug]/page.tsx')
 
 test('homepage copy positions DetLab as website-only with future template potential', () => {
   const page = fs.readFileSync(pagePath, 'utf8')
