@@ -97,6 +97,24 @@ npm run build
 npm run start
 ```
 
+`npm run build` now produces a static export in `web/out/`.
+`npm run start` serves that exported site locally on port `3000` so you can preview the exact static artifact before deploying it to a real web server.
+
+### GitHub Pages deployment
+
+The repo is prepared to deploy from GitHub Actions to GitHub Pages.
+
+Custom domain target:
+- `detlab.mell0wx.tech`
+
+Relevant files:
+- `.github/workflows/pages.yml`
+- `web/public/CNAME`
+- `web/public/.nojekyll`
+
+After GitHub Pages is enabled for the repository, point DNS for `detlab.mell0wx.tech` at GitHub Pages with a CNAME record to:
+- `egrexsec.github.io`
+
 ### Tests
 
 ```bash
