@@ -26,11 +26,11 @@ export default function HomePage() {
           </div>
           <div style={{ display: 'grid', gap: '14px', maxWidth: '860px' }}>
             <h1 style={{ margin: 0, fontSize: 'clamp(2.5rem, 6vw, 4.4rem)', lineHeight: 1.02 }}>
-              A website-only home for serious security documentation.
+              Publish security work and push finished artifacts straight to GitHub.
             </h1>
             <p style={{ margin: 0, color: '#cbd5e1', fontSize: '1.1rem', lineHeight: 1.7 }}>
-              DetLab is no longer positioned as a hybrid app with a backend workbench. The product direction is a focused website for publishing
-              detections, threat hunts, investigations, DFIR notes, and learning paths in a portfolio-quality format.
+              DetLab is a static-host friendly security documentation site with a client-side workbench for detections, threat hunts, and investigations.
+              Each lane can move from draft to repo-backed artifact without introducing a dedicated backend just to save content.
             </p>
             <p style={{ margin: 0, color: '#94a3b8', fontSize: '1rem', lineHeight: 1.7 }}>
               Longer term, the strongest patterns here can be turned into a self-hostable template that other practitioners or teams can spin up
@@ -50,7 +50,7 @@ export default function HomePage() {
                 fontWeight: 800,
               }}
             >
-              Browse content lanes
+              Browse lanes and workbenches
             </Link>
             <a
               href="https://github.com/egrexsec/DetLab-DAC"
@@ -82,9 +82,9 @@ export default function HomePage() {
             <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>
               Content architecture
             </div>
-            <h2 style={{ marginBottom: '8px' }}>Four website lanes, one documentation standard</h2>
+            <h2 style={{ marginBottom: '8px' }}>Four lanes, three save-enabled workbenches, one repo-backed publishing model</h2>
             <p style={{ color: '#94a3b8', margin: 0, lineHeight: 1.7 }}>
-              Each lane exists to make the site legible to a hiring manager, peer defender, or future template user within a quick scan.
+              Each lane exists to make the site legible to a hiring manager, peer defender, or future template user within a quick scan — and the core operational lanes can now move from draft to GitHub-backed artifact.
             </p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
@@ -133,7 +133,7 @@ export default function HomePage() {
             <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>
               Repository direction
             </div>
-            <h2 style={{ marginBottom: '10px' }}>Website-only now, template-ready later</h2>
+            <h2 style={{ marginBottom: '10px' }}>Static hosting, client-side authoring, GitHub-backed persistence</h2>
             <ul style={{ margin: 0, paddingLeft: '18px', color: '#cbd5e1', lineHeight: 1.8 }}>
               {roadmap.map((item) => (
                 <li key={item}>{item}</li>

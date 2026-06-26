@@ -1,15 +1,15 @@
 export const capabilityPillars = [
   {
     title: 'Detection engineering',
-    description: 'Document high-signal detections, map them to ATT&CK, and explain where they fit in a defender workflow.',
+    description: 'Document high-signal detections, map them to ATT&CK, and push completed detection artifacts straight into GitHub-backed libraries.',
   },
   {
     title: 'Threat hunting',
-    description: 'Capture hypotheses, pivots, telemetry assumptions, and the next detections a hunt should produce.',
+    description: 'Capture hypotheses, pivots, telemetry assumptions, and convert a finished hunt into a saved markdown artifact in the right repository.',
   },
   {
     title: 'Investigations and DFIR',
-    description: 'Turn incident notes, case studies, and forensic writeups into durable public-facing knowledge.',
+    description: 'Turn incident notes, case studies, and forensic writeups into durable public-facing knowledge with a built-in GitHub save path.',
   },
   {
     title: 'Learning paths and labs',
@@ -18,9 +18,9 @@ export const capabilityPillars = [
 ]
 
 export const roadmap = [
-  'Keep DetLab focused on being a polished website-only product, not a mixed website-plus-backend product.',
-  'Expand the site content and visual identity so each security lane feels like a real documentation surface.',
-  'Later, extract the best patterns into a self-hostable template that other practitioners can spin up for their own portfolio or team knowledge base.',
+  'Keep DetLab lightweight enough to host statically while still supporting client-side authoring and GitHub-backed saves.',
+  'Give detections, threat hunts, and investigations their own workbench flow instead of making every lane read-only.',
+  'Later, extract the best patterns into a self-hostable template that other practitioners or teams can spin up for their own portfolio or team knowledge base.',
 ]
 
 export const contentLanes = [
@@ -28,10 +28,10 @@ export const contentLanes = [
     slug: 'detections',
     title: 'Detection Engineering',
     shortTitle: 'Detections',
-    description: 'A website lane for publishing defender-focused detections with context, logic, and follow-on investigation guidance.',
+    description: 'A lane for publishing and authoring defender-focused detections with context, logic, and follow-on investigation guidance.',
     audience: 'Detection engineers, SOC analysts, and security engineers',
     repositoryArea: 'detections/ and knowledge/detection-engineering/',
-    futureTemplateNote: 'This lane is intended to become a reusable starter pattern for teams that want a documentation-first detection catalog.',
+    futureTemplateNote: 'This lane is intended to become a reusable starter pattern for teams that want a documentation-first detection catalog with a repo-backed authoring flow.',
     highlights: ['ATT&CK-mapped writeups', 'platform-specific detections', 'clear investigation follow-through'],
     entries: [
       {
@@ -53,7 +53,7 @@ export const contentLanes = [
     description: 'A lane for hypothesis-driven hunt writeups, pivot ideas, supporting telemetry, and downstream detection opportunities.',
     audience: 'Threat hunters and blue-team operators',
     repositoryArea: 'knowledge/threat-hunts/',
-    futureTemplateNote: 'This lane is designed so future users could fork the repo and publish their own hunt library with a reusable template-friendly starter structure.',
+    futureTemplateNote: 'This lane is designed so future users could fork the repo and publish their own hunt library with a reusable template-friendly starter structure and authoring workbench.',
     highlights: ['hunt hypotheses', 'pivot paths', 'follow-on detection ideas'],
     entries: [
       {
@@ -75,7 +75,7 @@ export const contentLanes = [
     description: 'A lane for incident response stories, cloud case studies, forensic notes, and response-oriented writeups.',
     audience: 'Incident responders, DFIR analysts, and security engineers',
     repositoryArea: 'knowledge/incident-response-case-studies/, knowledge/flaws-cloud/, and knowledge/flaws2-cloud/',
-    futureTemplateNote: 'This lane should eventually stand on its own as a reusable incident-writeup website template.',
+    futureTemplateNote: 'This lane should eventually stand on its own as a reusable incident-writeup website template with a GitHub-backed authoring path.',
     highlights: ['case-study format', 'timeline-ready notes', 'response lessons learned'],
     entries: [
       {

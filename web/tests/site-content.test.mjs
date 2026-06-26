@@ -23,8 +23,9 @@ test('lane lookup resolves valid slugs and rejects unknown ones', () => {
   assert.equal(getLaneBySlug('missing-lane'), null)
 })
 
-test('homepage support data reflects a website-only direction', () => {
+test('homepage support data reflects a GitHub-backed authoring direction', () => {
   assert.equal(capabilityPillars.length, 4)
-  assert.equal(roadmap.some((item) => item.toLowerCase().includes('website-only')), true)
+  assert.equal(capabilityPillars.some((item) => item.description.toLowerCase().includes('github')), true)
+  assert.equal(roadmap.some((item) => item.toLowerCase().includes('gitHub'.toLowerCase())), true)
   assert.equal(roadmap.some((item) => item.toLowerCase().includes('template')), true)
 })

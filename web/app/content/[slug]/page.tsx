@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import LaneWorkbench from '../../../components/lane-workbench'
 import { contentLanes, getLaneBySlug } from '../../../data/site-content.mjs'
 
 export function generateStaticParams() {
@@ -12,6 +13,8 @@ export default function ContentLanePage({ params }: { params: { slug: string } }
   if (!lane) {
     notFound()
   }
+
+  const workbenchEnabled = lane.slug === 'detections' || lane.slug === 'threat-hunts' || lane.slug === 'investigations'
 
   return (
     <main style={{ minHeight: '100vh', padding: '40px 24px 80px', background: '#020617', color: '#e2e8f0' }}>
@@ -35,7 +38,7 @@ export default function ContentLanePage({ params }: { params: { slug: string } }
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <StatCard label="Audience" value={lane.audience} />
           <StatCard label="Repository area" value={lane.repositoryArea} />
-          <StatCard label="Template direction" value="Future self-hostable starter" />
+          <StatCard label="Authoring mode" value={workbenchEnabled ? 'GitHub save enabled' : 'Reference lane'} />
         </section>
 
         <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(280px, 0.8fr)', gap: '16px' }}>
@@ -78,6 +81,8 @@ export default function ContentLanePage({ params }: { params: { slug: string } }
             ))}
           </div>
         </section>
+
+        {workbenchEnabled ? <LaneWorkbench initialLaneSlug={lane.slug} /> : null}
       </div>
     </main>
   )

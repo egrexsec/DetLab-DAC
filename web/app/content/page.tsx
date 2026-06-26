@@ -9,10 +9,10 @@ export default function ContentLandingPage() {
           <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>
             DetLab Content
           </div>
-          <h1 style={{ margin: 0 }}>Website lanes</h1>
+          <h1 style={{ margin: 0 }}>Lanes and workbenches</h1>
           <p style={{ color: '#94a3b8', margin: 0, lineHeight: 1.7 }}>
-            DetLab is organized as a website, not an in-browser authoring tool. Each lane below is meant to publish security work clearly today and
-            support a future self-hostable template tomorrow.
+            DetLab is organized around publication lanes, but the core operational lanes are no longer read-only. Open a lane to review example content,
+            draft a new artifact, and save it to the right GitHub repository path when it is ready.
           </p>
         </div>
 
