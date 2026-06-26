@@ -41,16 +41,14 @@ That directory can be served by:
 
 This repo is prepared to publish via GitHub Actions to GitHub Pages.
 
-Custom domain:
-- `detlab.mell0wx.tech`
+Current test URL:
+- `https://egrexsec.github.io/DetLab-DAC/`
 
 Supporting files:
 - `.github/workflows/pages.yml`
-- `web/public/CNAME`
 - `web/public/.nojekyll`
 
-DNS target for the custom domain:
-- `egrexsec.github.io`
+The Pages workflow builds with a project-repo base path so the exported site works correctly under `/DetLab-DAC/`.
 
 ## Minimal VPS deployment shape
 

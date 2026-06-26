@@ -104,16 +104,14 @@ npm run start
 
 The repo is prepared to deploy from GitHub Actions to GitHub Pages.
 
-Custom domain target:
-- `detlab.mell0wx.tech`
+Current test URL:
+- `https://egrexsec.github.io/DetLab-DAC/`
 
 Relevant files:
 - `.github/workflows/pages.yml`
-- `web/public/CNAME`
 - `web/public/.nojekyll`
 
-After GitHub Pages is enabled for the repository, point DNS for `detlab.mell0wx.tech` at GitHub Pages with a CNAME record to:
-- `egrexsec.github.io`
+The Pages workflow builds with a project-repo base path so the exported site works correctly under `/DetLab-DAC/`.
 
 ### Tests
 
