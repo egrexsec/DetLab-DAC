@@ -1,32 +1,88 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0102
 title: Fodhelper UAC Bypass Attempt
 description: Detects fodhelper.exe execution patterns commonly associated with UAC bypass for local privilege escalation.
-
-logsource:
-  product: windows
-  service: process_creation
-
-attack:
-  technique: T1548.002
-  tactic: privilege-escalation
-
-severity: high
 status: testing
+severity: high
 author: Mell0wx
-
-references:
-  - https://attack.mitre.org/techniques/T1548/002/
-
-falsepositives:
-  - Rare legitimate troubleshooting activity using fodhelper
-
-tests:
+domain:
+- endpoint
+platforms:
+- windows
+canonical_detection:
+  intent: Detects fodhelper.exe execution patterns commonly associated with UAC bypass for local privilege escalation.
+  attack:
+    primary:
+      technique: T1548.002
+      tactic: privilege-escalation
+    related: []
+  logsource:
+    product: windows
+    service: process_creation
+  analytics:
+    logic:
+      selection:
+        Image|endswith: \fodhelper.exe
+        ParentImage|endswith: \cmd.exe
+      condition: selection
+    selectors:
+    - canonical_field: process.name
+      platform_field: Image
+      operator: endswith_any
+      values:
+      - \fodhelper.exe
+    - canonical_field: process.parent.name
+      platform_field: ParentImage
+      operator: endswith_any
+      values:
+      - \cmd.exe
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: process_creation
+  data_sources: []
+  cloud_telemetry: []
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: process_creation
+    detection:
+      selection:
+        Image|endswith: \fodhelper.exe
+        ParentImage|endswith: \cmd.exe
+      condition: selection
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: Image
+    operator: endswith_any
+  - canonical_field: process.parent.name
+    platform_field: ParentImage
+    operator: endswith_any
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+workflow_guidance:
+  triage_steps: []
+  investigation_steps: []
+  escalation_guidance: []
+  hunt_suggestions: []
+supporting_artifacts:
+  artifacts: []
+  velociraptor_artifacts: []
+related_detections: []
+response_actions: []
+validation:
+  tests:
   - name: Fodhelper UAC bypass execution
     source: attack-simulation
     test_id: T1548.002
-
-detection:
-  selection:
-    Image|endswith: '\fodhelper.exe'
-    ParentImage|endswith: '\cmd.exe'
-  condition: selection
+  falsepositives:
+  - Rare legitimate troubleshooting activity using fodhelper
+references:
+- https://attack.mitre.org/techniques/T1548/002/

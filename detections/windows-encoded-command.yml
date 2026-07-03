@@ -1,27 +1,93 @@
-id: DET-0002
+schema_version: 2.0.0
+kind: detection
+id: DET-0008
 title: PowerShell EncodedCommand Execution
 description: Detects PowerShell launched with an encoded command payload.
-logsource:
-  product: windows
-  service: powershell
-attack:
-  technique: T1059.001
-  tactic: execution
-severity: critical
 status: testing
+severity: critical
 author: mell0wx
-references:
-  - https://attack.mitre.org/techniques/T1059/001/
-falsepositives:
-  - Approved red team or administrative automation using encoded PowerShell.
-tests:
+domain:
+- endpoint
+platforms:
+- windows
+canonical_detection:
+  intent: Detects PowerShell launched with an encoded command payload.
+  attack:
+    primary:
+      technique: T1059.001
+      tactic: execution
+    related: []
+  logsource:
+    product: windows
+    service: powershell
+  analytics:
+    logic:
+      selection:
+        Image: powershell.exe
+        CommandLine|contains:
+        - -enc
+        - -encodedcommand
+      condition: selection
+    selectors:
+    - canonical_field: process.name
+      platform_field: Image
+      operator: equals
+      values:
+      - powershell.exe
+    - canonical_field: process.command_line
+      platform_field: CommandLine
+      operator: contains_any
+      values:
+      - -enc
+      - -encodedcommand
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: powershell
+  data_sources: []
+  cloud_telemetry: []
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: powershell
+    detection:
+      selection:
+        Image: powershell.exe
+        CommandLine|contains:
+        - -enc
+        - -encodedcommand
+      condition: selection
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: Image
+    operator: equals
+  - canonical_field: process.command_line
+    platform_field: CommandLine
+    operator: contains_any
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+workflow_guidance:
+  triage_steps: []
+  investigation_steps: []
+  escalation_guidance: []
+  hunt_suggestions: []
+supporting_artifacts:
+  artifacts: []
+  velociraptor_artifacts: []
+related_detections: []
+response_actions: []
+validation:
+  tests:
   - name: Atomic Red Team T1059.001 EncodedCommand
     source: atomic-red-team
     test_id: 2
-detection:
-  selection:
-    Image: powershell.exe
-    CommandLine|contains:
-      - -enc
-      - -encodedcommand
-  condition: selection
+  falsepositives:
+  - Approved red team or administrative automation using encoded PowerShell.
+references:
+- https://attack.mitre.org/techniques/T1059/001/

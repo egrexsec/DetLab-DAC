@@ -1,74 +1,196 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0004
 title: Office Spawned PowerShell
 description: Detects Microsoft Office processes spawning PowerShell, a common initial execution pattern for malicious documents and follow-on script abuse.
-logsource:
-  product: windows
-  service: sysmon
-attack:
-  technique: T1204.002
-  tactic: execution
-severity: high
 status: validated
+severity: high
 author: Mell0wx
 domain:
-  - endpoint
+- endpoint
 platforms:
-  - windows
-attack_context:
-  - technique: T1059.001
-    tactic: execution
-    name: PowerShell
-    coverage: direct
-    rationale: Office-to-PowerShell execution is the immediate script execution behavior surfaced by this detection.
-  - technique: T1027
-    tactic: defense-evasion
-    name: Obfuscated Files or Information
-    coverage: partial
-    rationale: Malicious Office spawns frequently use encoded or obfuscated PowerShell arguments.
-  - technique: T1105
-    tactic: command-and-control
-    name: Ingress Tool Transfer
-    coverage: related
-    rationale: Office-launched PowerShell commonly retrieves secondary payloads from remote infrastructure.
-  - technique: T1053.005
-    tactic: persistence
-    name: Scheduled Task
-    coverage: gap
-    rationale: Follow-on persistence often lands as a scheduled task after initial malicious script execution.
-data_sources:
+- windows
+canonical_detection:
+  intent: Detects Microsoft Office processes spawning PowerShell, a common initial execution pattern for malicious documents and follow-on script abuse.
+  attack:
+    primary:
+      technique: T1204.002
+      tactic: execution
+    related:
+    - technique: T1059.001
+      tactic: execution
+      name: PowerShell
+      coverage: direct
+      rationale: Office-to-PowerShell execution is the immediate script execution behavior surfaced by this detection.
+    - technique: T1027
+      tactic: defense-evasion
+      name: Obfuscated Files or Information
+      coverage: partial
+      rationale: Malicious Office spawns frequently use encoded or obfuscated PowerShell arguments.
+    - technique: T1105
+      tactic: command-and-control
+      name: Ingress Tool Transfer
+      coverage: related
+      rationale: Office-launched PowerShell commonly retrieves secondary payloads from remote infrastructure.
+    - technique: T1053.005
+      tactic: persistence
+      name: Scheduled Task
+      coverage: gap
+      rationale: Follow-on persistence often lands as a scheduled task after initial malicious script execution.
+  logsource:
+    product: windows
+    service: sysmon
+  analytics:
+    logic:
+      selection:
+        EventID: 1
+        ParentImage|endswith:
+        - \\WINWORD.EXE
+        - \\EXCEL.EXE
+        - \\POWERPNT.EXE
+        - \\OUTLOOK.EXE
+        Image|endswith: \\powershell.exe
+      condition: selection
+    selectors:
+    - canonical_field: event.code
+      platform_field: EventID
+      operator: equals
+      values:
+      - 1
+    - canonical_field: process.parent.name
+      platform_field: ParentImage
+      operator: endswith_any
+      values:
+      - \\WINWORD.EXE
+      - \\EXCEL.EXE
+      - \\POWERPNT.EXE
+      - \\OUTLOOK.EXE
+    - canonical_field: process.name
+      platform_field: Image
+      operator: endswith_any
+      values:
+      - \\powershell.exe
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: sysmon
+  data_sources:
   - name: Sysmon Process Creation
     kind: endpoint
     provider: windows
     event_names:
-      - Event ID 1
+    - Event ID 1
     notes: Parent-child lineage is the key pivot for Office spawning PowerShell.
   - name: PowerShell Operational Log
     kind: endpoint
     provider: windows
     event_names:
-      - Event ID 4104
+    - Event ID 4104
     notes: Helpful for script-block context when command-line visibility is incomplete.
-triage_steps:
+  cloud_telemetry:
+  - provider: aws
+    source: CloudTrail
+    event_names:
+    - SendCommand
+    notes: Review cloud-managed endpoint execution if the host is AWS-managed and remote tasking is plausible.
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: sysmon
+    detection:
+      selection:
+        EventID: 1
+        ParentImage|endswith:
+        - \\WINWORD.EXE
+        - \\EXCEL.EXE
+        - \\POWERPNT.EXE
+        - \\OUTLOOK.EXE
+        Image|endswith: \\powershell.exe
+      condition: selection
+  field_mappings:
+  - canonical_field: event.code
+    platform_field: EventID
+    operator: equals
+  - canonical_field: process.parent.name
+    platform_field: ParentImage
+    operator: endswith_any
+  - canonical_field: process.name
+    platform_field: Image
+    operator: endswith_any
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+- mapping_id: splunk-spl
+  platform: splunk
+  language: spl
+  status: draft
+  query: index=win* sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational EventID=1 Image="*\powershell.exe" (ParentImage="*\WINWORD.EXE" OR ParentImage="*\EXCEL.EXE" OR ParentImage="*\POWERPNT.EXE" OR ParentImage="*\OUTLOOK.EXE")
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: Image
+    operator: endswith_any
+  - canonical_field: process.parent.name
+    platform_field: ParentImage
+    operator: endswith_any
+  notes: Draft Splunk translation for Office spawning PowerShell.
+- mapping_id: sentinel-kql
+  platform: microsoft-sentinel
+  language: kql
+  status: draft
+  query: 'DeviceProcessEvents
+
+    | where FileName =~ "powershell.exe"
+
+    | where InitiatingProcessFileName in~ ("WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE", "OUTLOOK.EXE")'
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: FileName
+    operator: equals
+  - canonical_field: process.parent.name
+    platform_field: InitiatingProcessFileName
+    operator: equals
+  notes: Draft Defender/Sentinel translation using parent process lineage.
+- mapping_id: elastic-eql
+  platform: elastic
+  language: eql
+  status: draft
+  query: process where process.name == "powershell.exe" and process.parent.name in ("WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE", "OUTLOOK.EXE")
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: process.name
+    operator: equals
+  - canonical_field: process.parent.name
+    platform_field: process.parent.name
+    operator: equals
+  notes: Draft Elastic EQL translation for Office parent-child lineage.
+workflow_guidance:
+  triage_steps:
   - step: Confirm the Office parent image, user context, document source, and full PowerShell command line.
     priority: high
     rationale: Separates benign automation from malicious document execution quickly.
   - step: Determine whether the Office process came from email, a download path, or temporary internet files.
     priority: high
     rationale: Origin materially changes malicious likelihood and response urgency.
-investigation_steps:
+  investigation_steps:
   - step: Review child processes, network connections, and script-block logging generated immediately after the PowerShell spawn.
     priority: high
     rationale: Identifies payload retrieval, execution staging, and lateral follow-on activity.
   - step: Check for persistence creation, credential access, or secondary LOLBin execution from the same host and user.
     priority: medium
     rationale: Office-origin script execution frequently branches into broader attacker workflows.
-escalation_guidance:
+  escalation_guidance:
   - Escalate immediately when the Office parent is Outlook, Word, or Excel and the PowerShell command line includes encoding, downloads, or hidden window flags.
-hunt_suggestions:
+  hunt_suggestions:
   - name: Office-to-script interpreter hunt
     hypothesis: Hosts with one suspicious Office script spawn often show adjacent cmd, rundll32, or mshta executions.
     query_hint: Hunt for Office parents spawning powershell.exe, cmd.exe, mshta.exe, or rundll32.exe across the same user population.
-artifacts:
+supporting_artifacts:
+  artifacts:
   - name: Recent Office document path
     category: file
     path: C:\Users\<user>\AppData\Local\Microsoft\Windows\INetCache
@@ -77,48 +199,33 @@ artifacts:
     category: event_log
     path: Microsoft-Windows-PowerShell/Operational
     notes: Capture script block and module logging where present.
-velociraptor_artifacts:
+  velociraptor_artifacts:
   - Windows.EventLogs.PowerShell
   - Windows.Sysmon.ProcessCreation
-cloud_telemetry:
-  - provider: aws
-    source: CloudTrail
-    event_names:
-      - SendCommand
-    notes: Review cloud-managed endpoint execution if the host is AWS-managed and remote tasking is plausible.
 related_detections:
-  - detection_id: DET-0001
-    relationship: child
-    rationale: Office spawns often lead directly into encoded PowerShell execution.
-  - detection_id: DET-0003
-    relationship: follow_on
-    rationale: Payload retrieval via certutil or other LOLBins is a common next step after script execution.
-  - detection_id: DET-0005
-    relationship: follow_on
-    rationale: Persistence frequently follows successful Office-delivered execution.
+- detection_id: DET-0001
+  relationship: child
+  rationale: Office spawns often lead directly into encoded PowerShell execution.
+- detection_id: DET-0003
+  relationship: follow_on
+  rationale: Payload retrieval via certutil or other LOLBins is a common next step after script execution.
+- detection_id: DET-0005
+  relationship: follow_on
+  rationale: Persistence frequently follows successful Office-delivered execution.
 response_actions:
-  - title: Isolate the host and preserve the originating document.
-    priority: high
-    description: Prevent further payload execution while retaining key evidence.
-  - title: Reset affected user credentials if the activity included payload download or secondary execution.
-    priority: medium
-    description: Reduces risk if the document led to credential theft or token abuse.
-references:
-  - https://attack.mitre.org/techniques/T1204/002/
-  - https://attack.mitre.org/techniques/T1059/001/
-falsepositives:
-  - Approved internal macros or add-ins that intentionally launch PowerShell
-tests:
+- title: Isolate the host and preserve the originating document.
+  priority: high
+  description: Prevent further payload execution while retaining key evidence.
+- title: Reset affected user credentials if the activity included payload download or secondary execution.
+  priority: medium
+  description: Reduces risk if the document led to credential theft or token abuse.
+validation:
+  tests:
   - name: Simulated Office parent process spawning PowerShell
     source: lab
     test_id: office-spawned-powershell-1
-detection:
-  selection:
-    EventID: 1
-    ParentImage|endswith:
-      - '\\WINWORD.EXE'
-      - '\\EXCEL.EXE'
-      - '\\POWERPNT.EXE'
-      - '\\OUTLOOK.EXE'
-    Image|endswith: '\\powershell.exe'
-  condition: selection
+  falsepositives:
+  - Approved internal macros or add-ins that intentionally launch PowerShell
+references:
+- https://attack.mitre.org/techniques/T1204/002/
+- https://attack.mitre.org/techniques/T1059/001/

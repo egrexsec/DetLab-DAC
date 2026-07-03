@@ -1,32 +1,88 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0101
 title: RDP External Remote Services Logon
 description: Detects successful Remote Desktop logons that may indicate ATT&CK external remote services initial access activity.
-
-logsource:
-  product: windows
-  service: security
-
-attack:
-  technique: T1133
-  tactic: initial-access
-
-severity: high
 status: testing
+severity: high
 author: Mell0wx
-
-references:
-  - https://attack.mitre.org/techniques/T1133/
-
-falsepositives:
-  - Legitimate remote administration through approved RDP paths
-
-tests:
+domain:
+- endpoint
+platforms:
+- windows
+canonical_detection:
+  intent: Detects successful Remote Desktop logons that may indicate ATT&CK external remote services initial access activity.
+  attack:
+    primary:
+      technique: T1133
+      tactic: initial-access
+    related: []
+  logsource:
+    product: windows
+    service: security
+  analytics:
+    logic:
+      selection:
+        EventID: 4624
+        LogonType: 10
+      condition: selection
+    selectors:
+    - canonical_field: event.code
+      platform_field: EventID
+      operator: equals
+      values:
+      - 4624
+    - canonical_field: logontype
+      platform_field: LogonType
+      operator: equals
+      values:
+      - 10
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: security
+  data_sources: []
+  cloud_telemetry: []
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: security
+    detection:
+      selection:
+        EventID: 4624
+        LogonType: 10
+      condition: selection
+  field_mappings:
+  - canonical_field: event.code
+    platform_field: EventID
+    operator: equals
+  - canonical_field: logontype
+    platform_field: LogonType
+    operator: equals
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+workflow_guidance:
+  triage_steps: []
+  investigation_steps: []
+  escalation_guidance: []
+  hunt_suggestions: []
+supporting_artifacts:
+  artifacts: []
+  velociraptor_artifacts: []
+related_detections: []
+response_actions: []
+validation:
+  tests:
   - name: Successful RDP logon event
     source: attack-simulation
     test_id: T1133
-
-detection:
-  selection:
-    EventID: 4624
-    LogonType: 10
-  condition: selection
+  falsepositives:
+  - Legitimate remote administration through approved RDP paths
+references:
+- https://attack.mitre.org/techniques/T1133/

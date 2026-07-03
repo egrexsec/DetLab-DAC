@@ -1,110 +1,158 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0202
 title: AWS AttachUserPolicy
 description: Detects IAM user policy attachment that may represent privilege escalation, persistence, or expansion of compromised cloud identity access.
-logsource:
-  product: aws
-  service: cloudtrail
-attack:
-  technique: T1098
-  tactic: persistence
-severity: high
 status: validated
+severity: high
 author: Mell0wx
 domain:
-  - cloud
-  - identity
+- cloud
+- identity
 platforms:
-  - aws
-attack_context:
-  - technique: T1098
-    tactic: persistence
-    name: Account Manipulation
-    coverage: direct
-    rationale: Attaching policies directly alters IAM permissions and account persistence posture.
-  - technique: T1078
-    tactic: defense-evasion
-    name: Valid Accounts
-    coverage: related
-    rationale: Policy attachment is often performed after an attacker gains access to valid cloud credentials.
-  - technique: T1484.001
-    tactic: privilege-escalation
-    name: Domain or Tenant Policy Modification
-    coverage: partial
-    rationale: Policy changes can materially raise privileges even when the event is not a broader org-level policy modification.
-  - technique: T1530
-    tactic: collection
-    name: Data from Cloud Storage
-    coverage: gap
-    rationale: Expanded IAM rights should trigger review for follow-on data access and collection.
-data_sources:
+- aws
+canonical_detection:
+  intent: Detects IAM user policy attachment that may represent privilege escalation, persistence, or expansion of compromised cloud identity access.
+  attack:
+    primary:
+      technique: T1098
+      tactic: persistence
+    related:
+    - technique: T1098
+      tactic: persistence
+      name: Account Manipulation
+      coverage: direct
+      rationale: Attaching policies directly alters IAM permissions and account persistence posture.
+    - technique: T1078
+      tactic: defense-evasion
+      name: Valid Accounts
+      coverage: related
+      rationale: Policy attachment is often performed after an attacker gains access to valid cloud credentials.
+    - technique: T1484.001
+      tactic: privilege-escalation
+      name: Domain or Tenant Policy Modification
+      coverage: partial
+      rationale: Policy changes can materially raise privileges even when the event is not a broader org-level policy modification.
+    - technique: T1530
+      tactic: collection
+      name: Data from Cloud Storage
+      coverage: gap
+      rationale: Expanded IAM rights should trigger review for follow-on data access and collection.
+  logsource:
+    product: aws
+    service: cloudtrail
+  analytics:
+    logic:
+      selection:
+        eventName: AttachUserPolicy
+        eventSource: iam.amazonaws.com
+      condition: selection
+    selectors:
+    - canonical_field: event.action
+      platform_field: eventName
+      operator: equals
+      values:
+      - AttachUserPolicy
+    - canonical_field: cloud.service
+      platform_field: eventSource
+      operator: equals
+      values:
+      - iam.amazonaws.com
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: aws
+    service: cloudtrail
+  data_sources:
   - name: AWS CloudTrail Management Events
     kind: cloud
     provider: aws
     event_names:
-      - AttachUserPolicy
-      - PutUserPolicy
+    - AttachUserPolicy
+    - PutUserPolicy
     notes: Primary source for who changed IAM permissions and which policy was attached.
-triage_steps:
+  cloud_telemetry:
+  - provider: aws
+    source: CloudTrail
+    event_names:
+    - AttachUserPolicy
+    - PutUserPolicy
+    - PutUserPermissionsBoundary
+    - AssumeRole
+    - GetCallerIdentity
+    notes: Use neighboring identity events to determine whether the privilege change is part of compromise progression.
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: aws
+      service: cloudtrail
+    detection:
+      selection:
+        eventName: AttachUserPolicy
+        eventSource: iam.amazonaws.com
+      condition: selection
+  field_mappings:
+  - canonical_field: event.action
+    platform_field: eventName
+    operator: equals
+  - canonical_field: cloud.service
+    platform_field: eventSource
+    operator: equals
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+workflow_guidance:
+  triage_steps:
   - step: Identify the actor, target IAM user, attached policy ARN, and whether the change matches an approved IAM workflow.
     priority: high
     rationale: Determines whether the action is normal administration or suspicious access expansion.
   - step: Check whether the actor recently created a new access key, assumed a role unusually, or logged in from a new location.
     priority: high
     rationale: Policy attachment is more suspicious when chained to identity anomalies.
-investigation_steps:
+  investigation_steps:
   - step: Review subsequent API calls from the actor and target principal for role assumption, secrets access, IAM enumeration, and S3 activity.
     priority: high
     rationale: Attackers often use new permissions immediately.
   - step: Compare the newly attached policy against prior permission baselines and break-glass patterns.
     priority: medium
     rationale: Distinguishes controlled admin changes from blast-radius expansion.
-escalation_guidance:
+  escalation_guidance:
   - Escalate immediately when privileged policies are attached outside change windows or by identities that recently showed anomalous CloudTrail activity.
-hunt_suggestions:
+  hunt_suggestions:
   - name: IAM privilege expansion hunt
     hypothesis: Suspicious policy attachment often sits inside a chain of access-key creation, role assumption, and privilege staging.
     query_hint: Hunt CreateAccessKey, AttachUserPolicy, PutUserPolicy, PutUserPermissionsBoundary, and AssumeRole events around the same principal.
-artifacts:
+supporting_artifacts:
+  artifacts:
   - name: CloudTrail policy attachment event
     category: cloud_log
     notes: Preserve requestParameters, userIdentity, source IP, MFA context, and session issuer details.
   - name: IAM policy document snapshot
     category: identity_log
     notes: Capture the attached policy contents to understand granted permissions.
-velociraptor_artifacts:
+  velociraptor_artifacts:
   - AWS.CloudTrail
-cloud_telemetry:
-  - provider: aws
-    source: CloudTrail
-    event_names:
-      - AttachUserPolicy
-      - PutUserPolicy
-      - PutUserPermissionsBoundary
-      - AssumeRole
-      - GetCallerIdentity
-    notes: Use neighboring identity events to determine whether the privilege change is part of compromise progression.
 related_detections:
-  - detection_id: DET-0201
-    relationship: parent
-    rationale: Attackers often create a new access key before attaching privileged IAM policies.
+- detection_id: DET-0201
+  relationship: parent
+  rationale: Attackers often create a new access key before attaching privileged IAM policies.
 response_actions:
-  - title: Detach the suspicious policy after preserving evidence.
-    priority: high
-    description: Removes excess privilege while maintaining the CloudTrail record and policy details.
-  - title: Review and rotate the impacted identity credentials.
-    priority: high
-    description: Needed if the principal may already be compromised.
-references:
-  - https://attack.mitre.org/techniques/T1098/
-  - https://docs.aws.amazon.com/IAM/latest/APIReference/API_AttachUserPolicy.html
-falsepositives:
-  - Approved IAM administration, onboarding, or temporary break-glass privilege changes
-tests:
+- title: Detach the suspicious policy after preserving evidence.
+  priority: high
+  description: Removes excess privilege while maintaining the CloudTrail record and policy details.
+- title: Review and rotate the impacted identity credentials.
+  priority: high
+  description: Needed if the principal may already be compromised.
+validation:
+  tests:
   - name: Simulated CloudTrail AttachUserPolicy event
     source: lab
     test_id: aws-attach-user-policy-1
-detection:
-  selection:
-    eventName: AttachUserPolicy
-    eventSource: iam.amazonaws.com
-  condition: selection
+  falsepositives:
+  - Approved IAM administration, onboarding, or temporary break-glass privilege changes
+references:
+- https://attack.mitre.org/techniques/T1098/
+- https://docs.aws.amazon.com/IAM/latest/APIReference/API_AttachUserPolicy.html

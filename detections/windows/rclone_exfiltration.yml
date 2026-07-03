@@ -1,34 +1,93 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0107
 title: Rclone Data Exfiltration Command
 description: Detects rclone copy commands that may indicate exfiltration over a web service or other external protocol.
-
-logsource:
-  product: windows
-  service: process_creation
-
-attack:
-  technique: T1048
-  tactic: exfiltration
-
-severity: high
 status: testing
+severity: high
 author: Mell0wx
-
-references:
-  - https://attack.mitre.org/techniques/T1048/
-
-falsepositives:
-  - Approved file synchronization to sanctioned remote storage
-
-tests:
+domain:
+- endpoint
+platforms:
+- windows
+canonical_detection:
+  intent: Detects rclone copy commands that may indicate exfiltration over a web service or other external protocol.
+  attack:
+    primary:
+      technique: T1048
+      tactic: exfiltration
+    related: []
+  logsource:
+    product: windows
+    service: process_creation
+  analytics:
+    logic:
+      selection:
+        Image|endswith: \rclone.exe
+        CommandLine|contains:
+        - ' copy '
+        - ':'
+      condition: selection
+    selectors:
+    - canonical_field: process.name
+      platform_field: Image
+      operator: endswith_any
+      values:
+      - \rclone.exe
+    - canonical_field: process.command_line
+      platform_field: CommandLine
+      operator: contains_any
+      values:
+      - ' copy '
+      - ':'
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: process_creation
+  data_sources: []
+  cloud_telemetry: []
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: process_creation
+    detection:
+      selection:
+        Image|endswith: \rclone.exe
+        CommandLine|contains:
+        - ' copy '
+        - ':'
+      condition: selection
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: Image
+    operator: endswith_any
+  - canonical_field: process.command_line
+    platform_field: CommandLine
+    operator: contains_any
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+workflow_guidance:
+  triage_steps: []
+  investigation_steps: []
+  escalation_guidance: []
+  hunt_suggestions: []
+supporting_artifacts:
+  artifacts: []
+  velociraptor_artifacts: []
+related_detections: []
+response_actions: []
+validation:
+  tests:
   - name: Rclone copy to remote target
     source: attack-simulation
     test_id: T1048
-
-detection:
-  selection:
-    Image|endswith: '\rclone.exe'
-    CommandLine|contains:
-      - ' copy '
-      - ':'
-  condition: selection
+  falsepositives:
+  - Approved file synchronization to sanctioned remote storage
+references:
+- https://attack.mitre.org/techniques/T1048/

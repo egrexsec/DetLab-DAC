@@ -18,7 +18,7 @@ test('slugify creates stable GitHub-safe path segments', () => {
   assert.equal(slugify(' Encoded PowerShell / Follow-On '), 'encoded-powershell-follow-on')
 })
 
-test('detection artifacts render markdown with multi-language sections', () => {
+test('detection artifacts render canonical schema frontmatter and multi-language sections', () => {
   const artifact = buildLaneArtifact({
     laneSlug: 'detections',
     title: 'Encoded PowerShell Follow-On',
@@ -29,7 +29,7 @@ test('detection artifacts render markdown with multi-language sections', () => {
     tactic: 'execution',
     severity: 'high',
     status: 'draft',
-    platform: 'windows',
+    platform: 'windows, endpoint',
     telemetry: 'Sysmon Event ID 1 with command-line logging enabled.',
     sigma: 'title: Encoded PowerShell',
     spl: 'index=win powershell',
@@ -46,6 +46,13 @@ test('detection artifacts render markdown with multi-language sections', () => {
 
   assert.equal(artifact.filename, 'encoded-powershell-follow-on.md')
   assert.equal(artifact.commitMessage.includes('Add detection brief:'), true)
+  assert.equal(artifact.content.includes('schema_version: 2.0.0'), true)
+  assert.equal(artifact.content.includes('canonical_schema: detlab/cross-platform-detection'), true)
+  assert.equal(artifact.content.includes('mapping_catalog:'), true)
+  assert.equal(artifact.content.includes("mapping_id: sigma-core"), true)
+  assert.equal(artifact.content.includes("mapping_id: xql-custom"), true)
+  assert.equal(artifact.content.includes('## Canonical detection'), true)
+  assert.equal(artifact.content.includes('## Telemetry requirements'), true)
   assert.equal(artifact.content.includes('## Sigma'), true)
   assert.equal(artifact.content.includes('## Splunk SPL'), true)
   assert.equal(artifact.content.includes('## Microsoft Sentinel KQL'), true)

@@ -1,34 +1,93 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0106
 title: Archive Sensitive Data for Collection
 description: Detects command-line archiving of user document paths that may indicate local data collection prior to staging or theft.
-
-logsource:
-  product: windows
-  service: process_creation
-
-attack:
-  technique: T1005
-  tactic: collection
-
-severity: medium
 status: testing
+severity: medium
 author: Mell0wx
-
-references:
-  - https://attack.mitre.org/techniques/T1005/
-
-falsepositives:
-  - Legitimate user backup or archive creation workflows
-
-tests:
+domain:
+- endpoint
+platforms:
+- windows
+canonical_detection:
+  intent: Detects command-line archiving of user document paths that may indicate local data collection prior to staging or theft.
+  attack:
+    primary:
+      technique: T1005
+      tactic: collection
+    related: []
+  logsource:
+    product: windows
+    service: process_creation
+  analytics:
+    logic:
+      selection:
+        Image|endswith: \7z.exe
+        CommandLine|contains:
+        - Documents
+        - .zip
+      condition: selection
+    selectors:
+    - canonical_field: process.name
+      platform_field: Image
+      operator: endswith_any
+      values:
+      - \7z.exe
+    - canonical_field: process.command_line
+      platform_field: CommandLine
+      operator: contains_any
+      values:
+      - Documents
+      - .zip
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: process_creation
+  data_sources: []
+  cloud_telemetry: []
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: process_creation
+    detection:
+      selection:
+        Image|endswith: \7z.exe
+        CommandLine|contains:
+        - Documents
+        - .zip
+      condition: selection
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: Image
+    operator: endswith_any
+  - canonical_field: process.command_line
+    platform_field: CommandLine
+    operator: contains_any
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+workflow_guidance:
+  triage_steps: []
+  investigation_steps: []
+  escalation_guidance: []
+  hunt_suggestions: []
+supporting_artifacts:
+  artifacts: []
+  velociraptor_artifacts: []
+related_detections: []
+response_actions: []
+validation:
+  tests:
   - name: Archive documents directory
     source: attack-simulation
     test_id: T1005
-
-detection:
-  selection:
-    Image|endswith: '\7z.exe'
-    CommandLine|contains:
-      - 'Documents'
-      - '.zip'
-  condition: selection
+  falsepositives:
+  - Legitimate user backup or archive creation workflows
+references:
+- https://attack.mitre.org/techniques/T1005/

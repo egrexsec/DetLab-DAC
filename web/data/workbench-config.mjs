@@ -56,12 +56,16 @@ export function buildRepoFilePath(directory, filename) {
   return `${directory.replace(/\/$/, '')}/${filename.replace(/^\//, '')}`
 }
 
+function escapeYamlString(value) {
+  return String(value).replace(/'/g, "''")
+}
+
 function formatFrontmatterList(items) {
   if (!items.length) {
     return '[]'
   }
 
-  return `[${items.map((item) => `'${item.replace(/'/g, "''")}'`).join(', ')}]`
+  return `[${items.map((item) => `'${escapeYamlString(item)}'`).join(', ')}]`
 }
 
 function renderBulletSection(title, items, fallback) {
@@ -72,6 +76,43 @@ function renderBulletSection(title, items, fallback) {
   }
 
   return `## ${title}\n${normalizedItems.map((item) => `- ${item}`).join('\n')}`
+}
+
+function renderCodeSection(title, language, body, fallback) {
+  const fence = '```'
+  return `## ${title}\n\n${fence}${language}\n${body.trim() || fallback}\n${fence}`
+}
+
+function buildMappingCatalog({ otherLanguage, otherQuery }) {
+  const mappings = [
+    { mappingId: 'sigma-core', platform: 'sigma', language: 'sigma', status: 'draft', section: 'Sigma' },
+    { mappingId: 'splunk-spl', platform: 'splunk', language: 'spl', status: 'draft', section: 'Splunk SPL' },
+    { mappingId: 'sentinel-kql', platform: 'microsoft-sentinel', language: 'kql', status: 'draft', section: 'Microsoft Sentinel KQL' },
+    { mappingId: 'elastic-eql', platform: 'elastic', language: 'eql', status: 'draft', section: 'Elastic EQL' },
+    { mappingId: 'elastic-esql', platform: 'elastic', language: 'esql', status: 'draft', section: 'Elastic ES|QL' },
+  ]
+
+  if ((otherLanguage || '').trim() || (otherQuery || '').trim()) {
+    mappings.push({
+      mappingId: `${slugify(otherLanguage || 'other') || 'other'}-custom`,
+      platform: 'custom',
+      language: (otherLanguage || 'other').trim().toLowerCase() || 'other',
+      status: 'draft',
+      section: (otherLanguage || 'Other').trim() || 'Other',
+    })
+  }
+
+  return mappings
+}
+
+function renderMappingCatalogFrontmatter(mappings) {
+  return mappings.flatMap((mapping) => [
+    '  - mapping_id: ' + mapping.mappingId,
+    '    platform: ' + mapping.platform,
+    '    language: ' + mapping.language,
+    '    status: ' + mapping.status,
+    `    section: '${escapeYamlString(mapping.section)}'`,
+  ])
 }
 
 export function buildLaneArtifact({
@@ -113,43 +154,58 @@ export function buildLaneArtifact({
   const validationLines = normalizeLines(validation || '')
   const falsePositiveLines = normalizeLines(falsePositives || '')
   const safeOtherLanguage = otherLanguage?.trim() || 'Other'
-
-  const fence = '```'
-  const codeSection = (title, language, body, fallback) =>
-    `## ${title}\n\n${fence}${language}\n${body.trim() || fallback}\n${fence}`
+  const platformList = normalizeTags(platform || '')
+  const effectivePlatforms = platformList.length ? platformList : ['windows']
+  const mappingCatalog = buildMappingCatalog({ otherLanguage, otherQuery })
+  const summaryLine = (summary.trim() || 'Describe what the detection finds, why it matters, and where it is expected to fire.').replace(/\s+/g, ' ')
+  const telemetryLine = (telemetry.trim() || 'Document the telemetry sources, field requirements, retention assumptions, and parser dependencies needed to run this detection reliably.').replace(/\s+/g, ' ')
 
   const sections = [
     '---',
-    `title: ${safeTitle || 'New detection brief'}`,
+    'schema_version: 2.0.0',
+    'kind: detection_document',
+    'canonical_schema: detlab/cross-platform-detection',
     `detection_id: ${slug ? `DET-${slug.toUpperCase().replace(/-/g, '_')}` : 'DET-NEW'}`,
-    `author: ${effectiveAuthor}`,
+    `title: '${escapeYamlString(safeTitle || 'New detection brief')}'`,
+    `author: '${escapeYamlString(effectiveAuthor)}'`,
     `status: ${status.trim() || 'draft'}`,
     `severity: ${severity.trim() || 'medium'}`,
-    `platform: ${platform.trim() || 'windows'}`,
+    `platforms: ${formatFrontmatterList(effectivePlatforms)}`,
     `tags: ${formatFrontmatterList(normalizedTags)}`,
-    `attack_tactic: ${tactic.trim() || 'execution'}`,
-    `attack_technique: ${technique.trim() || 'TBD'}`,
+    'attack:',
+    `  tactic: '${escapeYamlString(tactic.trim() || 'execution')}'`,
+    `  technique: '${escapeYamlString(technique.trim() || 'TBD')}'`,
+    `summary: '${escapeYamlString(summaryLine)}'`,
+    'telemetry_requirements:',
+    `  narrative: '${escapeYamlString(telemetryLine)}'`,
+    'mapping_catalog:',
+    ...renderMappingCatalogFrontmatter(mappingCatalog),
     '---',
     '',
-    '## Summary',
+    '## Canonical detection',
     summary.trim() || 'Describe what the detection finds, why it matters, and where it is expected to fire.',
     '',
-    '## Telemetry and prerequisites',
+    '## Telemetry requirements',
     telemetry.trim() || 'Document the telemetry sources, field requirements, retention assumptions, and parser dependencies needed to run this detection reliably.',
     '',
-    codeSection('Sigma', 'yaml', sigma, config.defaults.sigma),
+    '## Mapping catalog',
+    ...mappingCatalog.map(
+      (mapping) => '- `' + mapping.mappingId + '` — ' + mapping.platform + ' / ' + mapping.language + ' (' + mapping.status + ') -> ' + mapping.section,
+    ),
     '',
-    codeSection('Splunk SPL', 'spl', spl, config.defaults.spl),
+    renderCodeSection('Sigma', 'yaml', sigma, config.defaults.sigma),
     '',
-    codeSection('Microsoft Sentinel KQL', 'kusto', kql, config.defaults.kql),
+    renderCodeSection('Splunk SPL', 'spl', spl, config.defaults.spl),
     '',
-    codeSection('Elastic EQL', 'eql', eql, config.defaults.eql),
+    renderCodeSection('Microsoft Sentinel KQL', 'kusto', kql, config.defaults.kql),
     '',
-    codeSection('Elastic ES|QL', 'esql', esql, config.defaults.esql),
+    renderCodeSection('Elastic EQL', 'eql', eql, config.defaults.eql),
+    '',
+    renderCodeSection('Elastic ES|QL', 'esql', esql, config.defaults.esql),
   ]
 
   if ((otherLanguage || '').trim() || (otherQuery || '').trim()) {
-    sections.push('', codeSection(safeOtherLanguage, '', otherQuery, 'Add an additional platform-specific implementation.'))
+    sections.push('', renderCodeSection(safeOtherLanguage, '', otherQuery, 'Add an additional platform-specific implementation.'))
   }
 
   sections.push(

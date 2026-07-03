@@ -1,76 +1,130 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0005
 title: Scheduled Task Creation
 description: Detects suspicious creation of Windows scheduled tasks that may establish persistence, stage execution, or hide repeated malicious actions.
-logsource:
-  product: windows
-  service: security
-attack:
-  technique: T1053.005
-  tactic: persistence
-severity: high
 status: validated
+severity: high
 author: Mell0wx
 domain:
-  - endpoint
+- endpoint
 platforms:
-  - windows
-attack_context:
-  - technique: T1053.005
-    tactic: persistence
-    name: Scheduled Task
-    coverage: direct
-    rationale: The detection directly surfaces scheduled task persistence creation.
-  - technique: T1059.001
-    tactic: execution
-    name: PowerShell
-    coverage: related
-    rationale: Malicious tasks frequently launch PowerShell payloads or script cradles.
-  - technique: T1547
-    tactic: persistence
-    name: Boot or Logon Autostart Execution
-    coverage: related
-    rationale: Task creation often appears alongside other persistence mechanisms.
-  - technique: T1003
-    tactic: credential-access
-    name: OS Credential Dumping
-    coverage: gap
-    rationale: Privileged persistence may be followed by credential access from the scheduled payload.
-data_sources:
+- windows
+canonical_detection:
+  intent: Detects suspicious creation of Windows scheduled tasks that may establish persistence, stage execution, or hide repeated malicious actions.
+  attack:
+    primary:
+      technique: T1053.005
+      tactic: persistence
+    related:
+    - technique: T1053.005
+      tactic: persistence
+      name: Scheduled Task
+      coverage: direct
+      rationale: The detection directly surfaces scheduled task persistence creation.
+    - technique: T1059.001
+      tactic: execution
+      name: PowerShell
+      coverage: related
+      rationale: Malicious tasks frequently launch PowerShell payloads or script cradles.
+    - technique: T1547
+      tactic: persistence
+      name: Boot or Logon Autostart Execution
+      coverage: related
+      rationale: Task creation often appears alongside other persistence mechanisms.
+    - technique: T1003
+      tactic: credential-access
+      name: OS Credential Dumping
+      coverage: gap
+      rationale: Privileged persistence may be followed by credential access from the scheduled payload.
+  logsource:
+    product: windows
+    service: security
+  analytics:
+    logic:
+      selection:
+        EventID:
+        - 4698
+        - 4702
+      condition: selection
+    selectors:
+    - canonical_field: event.code
+      platform_field: EventID
+      operator: equals
+      values:
+      - 4698
+      - 4702
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: security
+  data_sources:
   - name: Windows Security Task Scheduler Events
     kind: endpoint
     provider: windows
     event_names:
-      - Event ID 4698
-      - Event ID 4702
+    - Event ID 4698
+    - Event ID 4702
     notes: Captures task creation and modification events.
   - name: TaskScheduler Operational Log
     kind: endpoint
     provider: windows
     event_names:
-      - Event ID 106
-      - Event ID 140
+    - Event ID 106
+    - Event ID 140
     notes: Useful for task registration and execution context.
-triage_steps:
+  cloud_telemetry:
+  - provider: aws
+    source: CloudTrail
+    event_names:
+    - SendCommand
+    - CreateAssociation
+    notes: Relevant when task persistence may have been staged through cloud management workflows.
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: security
+    detection:
+      selection:
+        EventID:
+        - 4698
+        - 4702
+      condition: selection
+  field_mappings:
+  - canonical_field: event.code
+    platform_field: EventID
+    operator: equals
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+workflow_guidance:
+  triage_steps:
   - step: Extract the task name, author, trigger, run-as principal, and action command.
     priority: high
     rationale: Those fields quickly distinguish enterprise management noise from attacker persistence.
   - step: Determine whether the task was created by a known admin tool, installer, or software update process.
     priority: medium
     rationale: Reduces false-positive churn from legitimate automation.
-investigation_steps:
+  investigation_steps:
   - step: Review the referenced executable or script path, task XML, and subsequent task launches.
     priority: high
     rationale: The payload path often reveals downloader, script, or credential-access intent.
   - step: Correlate with recent Office, PowerShell, rundll32, or certutil activity on the same host and user.
     priority: high
     rationale: Suspicious tasks are commonly a persistence leg of a larger intrusion chain.
-escalation_guidance:
+  escalation_guidance:
   - Escalate when the task runs from user-writable paths, launches script interpreters, or executes under privileged or service accounts without a clear admin workflow.
-hunt_suggestions:
+  hunt_suggestions:
   - name: New task persistence hunt
     hypothesis: Hosts creating one suspicious task often show other startup or script-based persistence around the same timeframe.
     query_hint: Hunt for task creation followed by powershell.exe, cmd.exe, rundll32.exe, or execution from AppData and Temp paths.
-artifacts:
+supporting_artifacts:
+  artifacts:
   - name: Scheduled task XML
     category: file
     path: C:\Windows\System32\Tasks
@@ -79,44 +133,32 @@ artifacts:
     category: event_log
     path: Microsoft-Windows-TaskScheduler/Operational
     notes: Confirms registration and execution timeline.
-velociraptor_artifacts:
+  velociraptor_artifacts:
   - Windows.Sys.Tasks
   - Windows.EventLogs.Evtx
-cloud_telemetry:
-  - provider: aws
-    source: CloudTrail
-    event_names:
-      - SendCommand
-      - CreateAssociation
-    notes: Relevant when task persistence may have been staged through cloud management workflows.
 related_detections:
-  - detection_id: DET-0004
-    relationship: parent
-    rationale: Office-delivered execution often creates scheduled tasks for persistence.
-  - detection_id: DET-0001
-    relationship: correlated
-    rationale: Scheduled tasks frequently execute encoded PowerShell as their action.
-  - detection_id: DET-0103
-    relationship: follow_on
-    rationale: Privileged persistence can precede credential dumping from the same host.
+- detection_id: DET-0004
+  relationship: parent
+  rationale: Office-delivered execution often creates scheduled tasks for persistence.
+- detection_id: DET-0001
+  relationship: correlated
+  rationale: Scheduled tasks frequently execute encoded PowerShell as their action.
+- detection_id: DET-0103
+  relationship: follow_on
+  rationale: Privileged persistence can precede credential dumping from the same host.
 response_actions:
-  - title: Disable the malicious task and preserve its XML definition.
-    priority: high
-    description: Removes persistence while retaining evidence.
-  - title: Scope for additional persistence and review the task payload binary or script.
-    priority: high
-    description: Attackers rarely stop at a single task artifact.
-references:
-  - https://attack.mitre.org/techniques/T1053/005/
-falsepositives:
-  - Software deployment systems, endpoint management, and approved admin automation creating legitimate scheduled tasks
-tests:
+- title: Disable the malicious task and preserve its XML definition.
+  priority: high
+  description: Removes persistence while retaining evidence.
+- title: Scope for additional persistence and review the task payload binary or script.
+  priority: high
+  description: Attackers rarely stop at a single task artifact.
+validation:
+  tests:
   - name: Simulated schtasks persistence creation
     source: lab
     test_id: scheduled-task-creation-1
-detection:
-  selection:
-    EventID:
-      - 4698
-      - 4702
-  condition: selection
+  falsepositives:
+  - Software deployment systems, endpoint management, and approved admin automation creating legitimate scheduled tasks
+references:
+- https://attack.mitre.org/techniques/T1053/005/

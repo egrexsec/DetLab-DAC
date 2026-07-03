@@ -1,75 +1,212 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0001
 title: Suspicious Encoded PowerShell
 description: Detects PowerShell launched with encoded command arguments.
-logsource:
-  product: windows
-  service: sysmon
-attack:
-  technique: T1059.001
-  tactic: execution
-severity: high
 status: experimental
+severity: high
 author: Mell0wx
 domain:
-  - endpoint
+- endpoint
 platforms:
-  - windows
-attack_context:
-  - technique: T1027
-    tactic: defense-evasion
-    name: Obfuscated Files or Information
-    coverage: partial
-    rationale: Encoded PowerShell often uses obfuscated command content.
-  - technique: T1105
-    tactic: command-and-control
-    name: Ingress Tool Transfer
-    coverage: related
-    rationale: PowerShell execution commonly pivots to payload retrieval.
-  - technique: T1547
-    tactic: persistence
-    name: Boot or Logon Autostart Execution
-    coverage: gap
-    rationale: Persistence often follows successful script execution and should be reviewed.
-  - technique: T1003
-    tactic: credential-access
-    name: OS Credential Dumping
-    coverage: gap
-    rationale: Post-exploitation PowerShell often precedes credential-access activity.
-data_sources:
+- windows
+canonical_detection:
+  intent: Detects PowerShell launched with encoded command arguments.
+  attack:
+    primary:
+      technique: T1059.001
+      tactic: execution
+    related:
+    - technique: T1027
+      tactic: defense-evasion
+      name: Obfuscated Files or Information
+      coverage: partial
+      rationale: Encoded PowerShell often uses obfuscated command content.
+    - technique: T1105
+      tactic: command-and-control
+      name: Ingress Tool Transfer
+      coverage: related
+      rationale: PowerShell execution commonly pivots to payload retrieval.
+    - technique: T1547
+      tactic: persistence
+      name: Boot or Logon Autostart Execution
+      coverage: gap
+      rationale: Persistence often follows successful script execution and should be reviewed.
+    - technique: T1003
+      tactic: credential-access
+      name: OS Credential Dumping
+      coverage: gap
+      rationale: Post-exploitation PowerShell often precedes credential-access activity.
+  logsource:
+    product: windows
+    service: sysmon
+  analytics:
+    logic:
+      selection:
+        EventID: 1
+        Image|endswith: \powershell.exe
+        CommandLine|contains:
+        - -enc
+        - -encodedcommand
+      condition: selection
+    selectors:
+    - canonical_field: event.code
+      platform_field: EventID
+      operator: equals
+      values:
+      - 1
+    - canonical_field: process.name
+      platform_field: Image
+      operator: endswith_any
+      values:
+      - \powershell.exe
+    - canonical_field: process.command_line
+      platform_field: CommandLine
+      operator: contains_any
+      values:
+      - -enc
+      - -encodedcommand
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: sysmon
+  data_sources:
   - name: Sysmon Process Creation
     kind: endpoint
     provider: windows
     event_names:
-      - Event ID 1
+    - Event ID 1
     notes: Command-line and image telemetry for PowerShell execution.
   - name: PowerShell Script Block Logging
     kind: endpoint
     provider: windows
     event_names:
-      - Event ID 4104
+    - Event ID 4104
     notes: Helps recover decoded or partially decoded script content.
-triage_steps:
+  cloud_telemetry:
+  - provider: aws
+    source: CloudTrail
+    event_names:
+    - StartSession
+    - SendCommand
+    notes: Review cloud-driven remote administration if the host is managed through AWS Systems Manager.
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: sysmon
+    detection:
+      selection:
+        EventID: 1
+        Image|endswith: \powershell.exe
+        CommandLine|contains:
+        - -enc
+        - -encodedcommand
+      condition: selection
+  field_mappings:
+  - canonical_field: event.code
+    platform_field: EventID
+    operator: equals
+  - canonical_field: process.name
+    platform_field: Image
+    operator: endswith_any
+  - canonical_field: process.command_line
+    platform_field: CommandLine
+    operator: contains_any
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+- mapping_id: splunk-spl
+  platform: splunk
+  language: spl
+  status: draft
+  query: index=win* sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational EventID=1 Image="*\powershell.exe" (CommandLine="*-enc*" OR CommandLine="*-encodedcommand*")
+  field_mappings:
+  - canonical_field: event.code
+    platform_field: EventID
+    operator: equals
+  - canonical_field: process.name
+    platform_field: Image
+    operator: endswith_any
+  - canonical_field: process.command_line
+    platform_field: CommandLine
+    operator: contains_any
+  notes: Draft Splunk translation of the canonical encoded PowerShell logic.
+- mapping_id: sentinel-kql
+  platform: microsoft-sentinel
+  language: kql
+  status: draft
+  query: 'DeviceProcessEvents
+
+    | where FileName =~ "powershell.exe"
+
+    | where ProcessCommandLine has_any ("-enc", "-encodedcommand")'
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: FileName
+    operator: equals
+  - canonical_field: process.command_line
+    platform_field: ProcessCommandLine
+    operator: contains_any
+  notes: Draft Defender/Sentinel translation using DeviceProcessEvents.
+- mapping_id: elastic-eql
+  platform: elastic
+  language: eql
+  status: draft
+  query: process where process.name == "powershell.exe" and process.command_line like "*-enc*"
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: process.name
+    operator: equals
+  - canonical_field: process.command_line
+    platform_field: process.command_line
+    operator: contains_any
+  notes: Draft Elastic EQL translation of the same behavior.
+- mapping_id: elastic-esql
+  platform: elastic
+  language: esql
+  status: draft
+  query: 'from logs-endpoint.events.process-*
+
+    | where process.name == "powershell.exe"
+
+    | where process.command_line like "%-enc%" or process.command_line like "%-encodedcommand%"'
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: process.name
+    operator: equals
+  - canonical_field: process.command_line
+    platform_field: process.command_line
+    operator: contains_any
+  notes: Draft ES|QL translation for normalized process telemetry.
+workflow_guidance:
+  triage_steps:
   - step: Validate the parent process, user, host, and full command line for the encoded PowerShell execution.
     priority: high
     rationale: Determines whether the execution fits known admin tooling or likely hands-on-keyboard activity.
   - step: Decode captured arguments where possible and compare them with approved scripts or management tooling.
     priority: high
     rationale: Separates benign automation from malicious script execution quickly.
-investigation_steps:
+  investigation_steps:
   - step: Review adjacent process creation, network connections, and subsequent child processes from the same PowerShell instance.
     priority: high
     rationale: Encoded PowerShell is commonly an entry point into download, execution, or persistence chains.
   - step: Search for repeated encoded invocations across the same user, host, and parent process lineage.
     priority: medium
     rationale: Helps scope whether the alert is isolated or part of a campaign.
-escalation_guidance:
+  escalation_guidance:
   - Escalate if the decoded content retrieves remote payloads, tampers with security controls, or stages persistence.
   - Escalate if the same user or host shows repeated encoded execution outside approved administration windows.
-hunt_suggestions:
+  hunt_suggestions:
   - name: PowerShell download cradle follow-on hunt
     hypothesis: Hosts using encoded PowerShell may also retrieve remote payloads or stage secondary scripts.
     query_hint: Search for PowerShell plus WebClient, Invoke-WebRequest, Start-BitsTransfer, or outbound connections near the alert time.
-artifacts:
+supporting_artifacts:
+  artifacts:
   - name: PowerShell operational logs
     category: event_log
     path: Microsoft-Windows-PowerShell/Operational
@@ -78,46 +215,32 @@ artifacts:
     category: file
     path: '%APPDATA%\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt'
     notes: May show interactive commands preceding the encoded invocation.
-velociraptor_artifacts:
+  velociraptor_artifacts:
   - Windows.EventLogs.PowerShell
   - Windows.Forensics.Persistence
-cloud_telemetry:
-  - provider: aws
-    source: CloudTrail
-    event_names:
-      - StartSession
-      - SendCommand
-    notes: Review cloud-driven remote administration if the host is managed through AWS Systems Manager.
 related_detections:
-  - detection_id: DET-0003
-    relationship: follow_on
-    rationale: Encoded PowerShell often leads to payload download activity.
-  - detection_id: DET-0002
-    relationship: investigate_next
-    rationale: Adversaries may pivot from PowerShell to LOLBin execution to evade controls.
-  - detection_id: DET-0103
-    relationship: follow_on
-    rationale: Successful script execution can precede credential-access tooling.
+- detection_id: DET-0003
+  relationship: follow_on
+  rationale: Encoded PowerShell often leads to payload download activity.
+- detection_id: DET-0002
+  relationship: investigate_next
+  rationale: Adversaries may pivot from PowerShell to LOLBin execution to evade controls.
+- detection_id: DET-0103
+  relationship: follow_on
+  rationale: Successful script execution can precede credential-access tooling.
 response_actions:
-  - title: Isolate the host if decoded content is malicious or unknown.
-    priority: high
-    description: Prevent follow-on execution while preserving evidence.
-  - title: Revoke or monitor the affected user session.
-    priority: medium
-    description: Useful when the alert originates from interactive user context.
-references:
-  - https://attack.mitre.org/techniques/T1059/001/
-falsepositives:
-  - Administrative scripts using encoded commands
-tests:
+- title: Isolate the host if decoded content is malicious or unknown.
+  priority: high
+  description: Prevent follow-on execution while preserving evidence.
+- title: Revoke or monitor the affected user session.
+  priority: medium
+  description: Useful when the alert originates from interactive user context.
+validation:
+  tests:
   - name: Atomic Red Team T1059.001
     source: atomic-red-team
-    test_id: "1"
-detection:
-  selection:
-    EventID: 1
-    Image|endswith: '\powershell.exe'
-    CommandLine|contains:
-      - '-enc'
-      - '-encodedcommand'
-  condition: selection
+    test_id: '1'
+  falsepositives:
+  - Administrative scripts using encoded commands
+references:
+- https://attack.mitre.org/techniques/T1059/001/

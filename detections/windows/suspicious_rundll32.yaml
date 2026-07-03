@@ -1,60 +1,113 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0002
 title: Suspicious Rundll32 Execution
 description: Detects rundll32 launching DLLs from suspicious paths or with unusual arguments.
-logsource:
-  product: windows
-  service: sysmon
-attack:
-  technique: T1218.011
-  tactic: defense-evasion
-severity: high
 status: experimental
+severity: high
 author: Mell0wx
 domain:
-  - endpoint
+- endpoint
 platforms:
-  - windows
-attack_context:
-  - technique: T1059.001
-    tactic: execution
-    name: PowerShell
-    coverage: related
-    rationale: Script execution frequently stages or launches LOLBin execution chains.
-  - technique: T1574.001
-    tactic: persistence
-    name: DLL Search Order Hijacking
-    coverage: partial
-    rationale: Suspicious rundll32 execution can overlap with DLL side-loading or hijack tradecraft.
-  - technique: T1105
-    tactic: command-and-control
-    name: Ingress Tool Transfer
-    coverage: related
-    rationale: Retrieved DLL payloads may be executed through rundll32.
-data_sources:
+- windows
+canonical_detection:
+  intent: Detects rundll32 launching DLLs from suspicious paths or with unusual arguments.
+  attack:
+    primary:
+      technique: T1218.011
+      tactic: defense-evasion
+    related:
+    - technique: T1059.001
+      tactic: execution
+      name: PowerShell
+      coverage: related
+      rationale: Script execution frequently stages or launches LOLBin execution chains.
+    - technique: T1574.001
+      tactic: persistence
+      name: DLL Search Order Hijacking
+      coverage: partial
+      rationale: Suspicious rundll32 execution can overlap with DLL side-loading or hijack tradecraft.
+    - technique: T1105
+      tactic: command-and-control
+      name: Ingress Tool Transfer
+      coverage: related
+      rationale: Retrieved DLL payloads may be executed through rundll32.
+  logsource:
+    product: windows
+    service: sysmon
+  analytics:
+    logic:
+      selection:
+        EventID: 1
+        Image|endswith: \rundll32.exe
+      condition: selection
+    selectors:
+    - canonical_field: event.code
+      platform_field: EventID
+      operator: equals
+      values:
+      - 1
+    - canonical_field: process.name
+      platform_field: Image
+      operator: endswith_any
+      values:
+      - \rundll32.exe
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: sysmon
+  data_sources:
   - name: Sysmon Process Creation
     kind: endpoint
     provider: windows
     event_names:
-      - Event ID 1
+    - Event ID 1
     notes: Captures image path and suspicious command-line arguments.
-triage_steps:
+  cloud_telemetry: []
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: sysmon
+    detection:
+      selection:
+        EventID: 1
+        Image|endswith: \rundll32.exe
+      condition: selection
+  field_mappings:
+  - canonical_field: event.code
+    platform_field: EventID
+    operator: equals
+  - canonical_field: process.name
+    platform_field: Image
+    operator: endswith_any
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+workflow_guidance:
+  triage_steps:
   - step: Confirm the DLL path, export name, parent process, and user context for the rundll32 execution.
     priority: high
     rationale: Quickly distinguishes signed software usage from attacker-controlled execution.
-investigation_steps:
+  investigation_steps:
   - step: Review the referenced DLL on disk, its signature, origin path, and recent file creation events.
     priority: high
     rationale: Malicious or staged DLLs often sit in user-writable or temporary locations.
   - step: Pivot to other LOLBin usage from the same host or parent process.
     priority: medium
     rationale: Rundll32 abuse often appears alongside other proxy execution behavior.
-escalation_guidance:
+  escalation_guidance:
   - Escalate if rundll32 loads unsigned DLLs from user-writable paths or internet download locations.
-hunt_suggestions:
+  hunt_suggestions:
   - name: LOLBin proxy execution chain hunt
     hypothesis: Hosts with suspicious rundll32 execution may also show mshta, regsvr32, or certutil activity.
     query_hint: Hunt for LOLBins launched from Office, script interpreters, temp directories, or archive extraction paths.
-artifacts:
+supporting_artifacts:
+  artifacts:
   - name: Prefetch for rundll32
     category: file
     path: C:\Windows\Prefetch\RUNDLL32*.pf
@@ -63,30 +116,26 @@ artifacts:
     category: file
     path: C:\Windows\AppCompat\Programs\Amcache.hve
     notes: Helps identify first-seen DLL execution and file metadata.
-velociraptor_artifacts:
+  velociraptor_artifacts:
   - Windows.Forensics.Amcache
   - Windows.System.Prefetch
 related_detections:
-  - detection_id: DET-0001
-    relationship: correlated
-    rationale: PowerShell frequently stages or launches suspicious rundll32 activity.
-  - detection_id: DET-0003
-    relationship: correlated
-    rationale: Adversaries often chain LOLBins for download and execution.
+- detection_id: DET-0001
+  relationship: correlated
+  rationale: PowerShell frequently stages or launches suspicious rundll32 activity.
+- detection_id: DET-0003
+  relationship: correlated
+  rationale: Adversaries often chain LOLBins for download and execution.
 response_actions:
-  - title: Contain the host if unsigned or user-writable DLL execution is confirmed.
-    priority: high
-    description: Prevent reuse of the DLL or linked persistence mechanisms.
-references:
-  - https://attack.mitre.org/techniques/T1218/011/
-falsepositives:
-  - Rare administrative software using rundll32 in custom paths
-tests:
+- title: Contain the host if unsigned or user-writable DLL execution is confirmed.
+  priority: high
+  description: Prevent reuse of the DLL or linked persistence mechanisms.
+validation:
+  tests:
   - name: Simulated Rundll32 abuse
     source: manual
-    test_id: "rundll32-1"
-detection:
-  selection:
-    EventID: 1
-    Image|endswith: '\rundll32.exe'
-  condition: selection
+    test_id: rundll32-1
+  falsepositives:
+  - Rare administrative software using rundll32 in custom paths
+references:
+- https://attack.mitre.org/techniques/T1218/011/

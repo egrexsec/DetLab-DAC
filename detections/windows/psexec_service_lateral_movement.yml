@@ -1,32 +1,88 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0105
 title: PsExec Service Installation
 description: Detects PsExec-style remote service installation that often accompanies SMB or admin-share lateral movement.
-
-logsource:
-  product: windows
-  service: system
-
-attack:
-  technique: T1021.002
-  tactic: lateral-movement
-
-severity: high
 status: testing
+severity: high
 author: Mell0wx
-
-references:
-  - https://attack.mitre.org/techniques/T1021/002/
-
-falsepositives:
-  - Approved remote administration using PsExec or similar tooling
-
-tests:
+domain:
+- endpoint
+platforms:
+- windows
+canonical_detection:
+  intent: Detects PsExec-style remote service installation that often accompanies SMB or admin-share lateral movement.
+  attack:
+    primary:
+      technique: T1021.002
+      tactic: lateral-movement
+    related: []
+  logsource:
+    product: windows
+    service: system
+  analytics:
+    logic:
+      selection:
+        EventID: 7045
+        ServiceName|contains: PSEXESVC
+      condition: selection
+    selectors:
+    - canonical_field: event.code
+      platform_field: EventID
+      operator: equals
+      values:
+      - 7045
+    - canonical_field: service.name
+      platform_field: ServiceName
+      operator: contains_any
+      values:
+      - PSEXESVC
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: system
+  data_sources: []
+  cloud_telemetry: []
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: system
+    detection:
+      selection:
+        EventID: 7045
+        ServiceName|contains: PSEXESVC
+      condition: selection
+  field_mappings:
+  - canonical_field: event.code
+    platform_field: EventID
+    operator: equals
+  - canonical_field: service.name
+    platform_field: ServiceName
+    operator: contains_any
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+workflow_guidance:
+  triage_steps: []
+  investigation_steps: []
+  escalation_guidance: []
+  hunt_suggestions: []
+supporting_artifacts:
+  artifacts: []
+  velociraptor_artifacts: []
+related_detections: []
+response_actions: []
+validation:
+  tests:
   - name: PsExec service creation event
     source: attack-simulation
     test_id: T1021.002
-
-detection:
-  selection:
-    EventID: 7045
-    ServiceName|contains: 'PSEXESVC'
-  condition: selection
+  falsepositives:
+  - Approved remote administration using PsExec or similar tooling
+references:
+- https://attack.mitre.org/techniques/T1021/002/

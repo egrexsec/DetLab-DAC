@@ -101,11 +101,15 @@ A strong DetLab detection entry should capture:
 - why the behavior matters
 - telemetry prerequisites and source assumptions
 - ATT&CK tactic and technique context
-- rule logic in one or more implementation dialects
+- one canonical analytic model plus one or more implementation mappings
+- field-level translation between canonical fields and platform-native fields
 - false-positive expectations
 - triage steps
 - validation approach
 - references or linked source material
+
+Schema reference:
+- `docs/schema/canonical-detection-schema.md`
 
 ## Workbench behavior
 

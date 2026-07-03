@@ -1,61 +1,116 @@
+schema_version: 2.0.0
+kind: detection
 id: DET-0103
 title: LSASS Memory Dump via ProcDump
 description: Detects ProcDump command lines commonly used to dump LSASS process memory for credential access.
-
-logsource:
-  product: windows
-  service: process_creation
-
-attack:
-  technique: T1003.001
-  tactic: credential-access
-
-severity: critical
 status: testing
+severity: critical
 author: Mell0wx
 domain:
-  - endpoint
+- endpoint
 platforms:
-  - windows
-attack_context:
-  - technique: T1055
-    tactic: defense-evasion
-    name: Process Injection
-    coverage: related
-    rationale: Credential theft often sits in broader process-manipulation chains.
-  - technique: T1078
-    tactic: defense-evasion
-    name: Valid Accounts
-    coverage: gap
-    rationale: Credential access commonly enables follow-on account abuse that separate detections should cover.
-data_sources:
+- windows
+canonical_detection:
+  intent: Detects ProcDump command lines commonly used to dump LSASS process memory for credential access.
+  attack:
+    primary:
+      technique: T1003.001
+      tactic: credential-access
+    related:
+    - technique: T1055
+      tactic: defense-evasion
+      name: Process Injection
+      coverage: related
+      rationale: Credential theft often sits in broader process-manipulation chains.
+    - technique: T1078
+      tactic: defense-evasion
+      name: Valid Accounts
+      coverage: gap
+      rationale: Credential access commonly enables follow-on account abuse that separate detections should cover.
+  logsource:
+    product: windows
+    service: process_creation
+  analytics:
+    logic:
+      selection:
+        Image|endswith: \procdump.exe
+        CommandLine|contains:
+        - lsass
+        - -ma
+      condition: selection
+    selectors:
+    - canonical_field: process.name
+      platform_field: Image
+      operator: endswith_any
+      values:
+      - \procdump.exe
+    - canonical_field: process.command_line
+      platform_field: CommandLine
+      operator: contains_any
+      values:
+      - lsass
+      - -ma
+    condition: selection
+telemetry_requirements:
+  primary_logsource:
+    product: windows
+    service: process_creation
+  data_sources:
   - name: Windows Process Creation
     kind: endpoint
     provider: windows
     event_names:
-      - Event ID 4688
+    - Event ID 4688
     notes: Captures ProcDump execution and command-line arguments.
   - name: Sysmon Process Access
     kind: endpoint
     provider: windows
     event_names:
-      - Event ID 10
+    - Event ID 10
     notes: Helps confirm suspicious access to LSASS memory.
-triage_steps:
+  cloud_telemetry: []
+mappings:
+- mapping_id: sigma-core
+  platform: sigma
+  language: sigma
+  status: available
+  purpose: canonical
+  query:
+    logsource:
+      product: windows
+      service: process_creation
+    detection:
+      selection:
+        Image|endswith: \procdump.exe
+        CommandLine|contains:
+        - lsass
+        - -ma
+      condition: selection
+  field_mappings:
+  - canonical_field: process.name
+    platform_field: Image
+    operator: endswith_any
+  - canonical_field: process.command_line
+    platform_field: CommandLine
+    operator: contains_any
+  notes: Current canonical selector logic preserved as the Sigma-style source mapping.
+workflow_guidance:
+  triage_steps:
   - step: Validate whether ProcDump was launched by security tooling, IR personnel, or an unexpected user session.
     priority: high
     rationale: LSASS access is high-severity but can appear in legitimate response activity.
-investigation_steps:
+  investigation_steps:
   - step: Review process access telemetry, dump file creation, parent process lineage, and any credential use that follows.
     priority: high
     rationale: Confirms credential theft behavior and helps scope downstream compromise.
-escalation_guidance:
+  escalation_guidance:
   - Escalate immediately if LSASS dump files, follow-on lateral movement, or unauthorized admin tooling are observed.
-hunt_suggestions:
+  hunt_suggestions:
   - name: Credential access and token abuse hunt
     hypothesis: Hosts with LSASS dump attempts may also show token theft, lateral movement, or anomalous privileged logons.
     query_hint: Hunt for procdump, comsvcs.dll MiniDump, suspicious handle access, and subsequent privileged authentication events.
-artifacts:
+supporting_artifacts:
+  artifacts:
   - name: Memory dump artifact
     category: file
     notes: Preserve any generated .dmp files and associated file metadata.
@@ -63,33 +118,23 @@ artifacts:
     category: event_log
     path: Security
     notes: Useful for privileged logons and process creation context.
-velociraptor_artifacts:
+  velociraptor_artifacts:
   - Windows.Detection.ProcessAccess
   - Windows.System.SecurityLog
 related_detections:
-  - detection_id: DET-0001
-    relationship: correlated
-    rationale: Script-based post-exploitation may lead into credential dumping.
+- detection_id: DET-0001
+  relationship: correlated
+  rationale: Script-based post-exploitation may lead into credential dumping.
 response_actions:
-  - title: Isolate the host and rotate exposed credentials.
-    priority: high
-    description: Limit attacker reuse of captured secrets and preserve host state.
-
-references:
-  - https://attack.mitre.org/techniques/T1003/001/
-
-falsepositives:
-  - Security tooling or authorized incident response memory capture
-
-tests:
+- title: Isolate the host and rotate exposed credentials.
+  priority: high
+  description: Limit attacker reuse of captured secrets and preserve host state.
+validation:
+  tests:
   - name: ProcDump lsass dump command
     source: attack-simulation
     test_id: T1003.001
-
-detection:
-  selection:
-    Image|endswith: '\procdump.exe'
-    CommandLine|contains:
-      - 'lsass'
-      - '-ma'
-  condition: selection
+  falsepositives:
+  - Security tooling or authorized incident response memory capture
+references:
+- https://attack.mitre.org/techniques/T1003/001/
