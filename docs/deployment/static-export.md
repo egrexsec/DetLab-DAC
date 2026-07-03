@@ -1,6 +1,6 @@
-# DetLab static website deployment
+# DetLab-DAC static website deployment
 
-DetLab is now prepared to deploy as a static website.
+DetLab-DAC is prepared to deploy as a static detection-engineering documentation site.
 
 ## What changed
 - `web/next.config.mjs` uses `output: 'export'`
@@ -89,4 +89,4 @@ Because the site is exported with trailing slashes, nested routes like `/content
 ## Operational notes
 - No Node.js app server is required in production if you deploy `web/out/` to a static host.
 - Re-deploy means rebuilding `web/out/` and syncing that directory to the host.
-- This is the safest deployment shape for the current repo because the site is content-first and fully static.
+- The site is intentionally detection-engineering-only; keep deployment changes aligned to that narrow scope.

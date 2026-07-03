@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 
 export const metadata: Metadata = {
-  title: 'DetLab | Security Documentation Website',
+  title: 'DetLab-DAC | Detection Engineering Documentation',
   description:
-    'A website-only security documentation platform for detections, threat hunts, investigations, DFIR notes, and learning paths — with a future path to becoming a reusable self-hosted template.',
+    'A static detection-engineering documentation site for publishing detections across Sigma, SPL, KQL, EQL, ES|QL, and related rule dialects.',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -8,18 +8,18 @@ const testDir = path.dirname(fileURLToPath(import.meta.url))
 const pagePath = path.resolve(testDir, '../app/page.tsx')
 const contentRoutePath = path.resolve(testDir, '../app/content/[slug]/page.tsx')
 
-test('homepage copy positions DetLab as a GitHub-backed authoring site', () => {
+test('homepage copy positions DetLab as a detection-engineering site', () => {
   const page = fs.readFileSync(pagePath, 'utf8')
 
-  assert.equal(page.includes('GitHub'), true)
-  assert.equal(page.toLowerCase().includes('self-hostable template'), true)
-  assert.equal(page.includes('client-side workbench'), true)
+  assert.equal(page.includes('Detection engineering documentation, without the extra lanes.'), true)
+  assert.equal(page.includes('Splunk SPL'), true)
+  assert.equal(page.toLowerCase().includes('no hunt lane'), true)
 })
 
-test('content route embeds the lane workbench for supported operational lanes', () => {
+test('content route embeds the detection workbench directly', () => {
   const contentRoute = fs.readFileSync(contentRoutePath, 'utf8')
 
   assert.equal(contentRoute.includes('LaneWorkbench'), true)
   assert.equal(contentRoute.includes('GitHub save enabled'), true)
-  assert.equal(contentRoute.includes("lane.slug === 'detections' || lane.slug === 'threat-hunts' || lane.slug === 'investigations'"), true)
+  assert.equal(contentRoute.includes('Packaging standard'), true)
 })

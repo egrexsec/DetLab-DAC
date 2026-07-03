@@ -14,8 +14,6 @@ export default function ContentLanePage({ params }: { params: { slug: string } }
     notFound()
   }
 
-  const workbenchEnabled = lane.slug === 'detections' || lane.slug === 'threat-hunts' || lane.slug === 'investigations'
-
   return (
     <main style={{ minHeight: '100vh', padding: '40px 24px 80px', background: '#020617', color: '#e2e8f0' }}>
       <div style={{ maxWidth: '1080px', margin: '0 auto', display: 'grid', gap: '20px' }}>
@@ -31,14 +29,14 @@ export default function ContentLanePage({ params }: { params: { slug: string } }
             href="/content"
             style={{ color: '#e2e8f0', textDecoration: 'none', border: '1px solid #334155', borderRadius: '999px', padding: '10px 14px' }}
           >
-            Back to lanes
+            Back to content
           </Link>
         </div>
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <StatCard label="Audience" value={lane.audience} />
           <StatCard label="Repository area" value={lane.repositoryArea} />
-          <StatCard label="Authoring mode" value={workbenchEnabled ? 'GitHub save enabled' : 'Reference lane'} />
+          <StatCard label="Authoring mode" value="GitHub save enabled" />
         </section>
 
         <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(280px, 0.8fr)', gap: '16px' }}>
@@ -54,11 +52,12 @@ export default function ContentLanePage({ params }: { params: { slug: string } }
             <p style={{ color: '#94a3b8', lineHeight: 1.7, marginBottom: 0 }}>{lane.futureTemplateNote}</p>
           </article>
           <article style={cardStyle}>
-            <h2 style={{ marginTop: 0 }}>Publishing standard</h2>
+            <h2 style={{ marginTop: 0 }}>Packaging standard</h2>
             <ul style={{ margin: 0, paddingLeft: '18px', color: '#cbd5e1', lineHeight: 1.8 }}>
-              <li>Explain what happened and why it matters.</li>
-              <li>Show the defender workflow, not just the headline idea.</li>
-              <li>Keep each entry legible enough for hiring, portfolio, and peer-review use.</li>
+              <li>Keep one documented behavior per artifact.</li>
+              <li>Preserve telemetry assumptions and ATT&CK context.</li>
+              <li>Show equivalent logic across multiple rule or query dialects when possible.</li>
+              <li>Include false positives, triage, and validation notes.</li>
             </ul>
           </article>
         </section>
@@ -82,7 +81,7 @@ export default function ContentLanePage({ params }: { params: { slug: string } }
           </div>
         </section>
 
-        {workbenchEnabled ? <LaneWorkbench initialLaneSlug={lane.slug} /> : null}
+        <LaneWorkbench initialLaneSlug="detections" />
       </div>
     </main>
   )

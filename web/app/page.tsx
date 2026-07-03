@@ -16,25 +16,27 @@ const cardStyle = {
   boxShadow: '0 16px 40px rgba(2, 6, 23, 0.28)',
 } as const
 
+const supportedDialects = ['Sigma', 'Splunk SPL', 'Microsoft Sentinel KQL', 'Elastic EQL', 'Elastic ES|QL']
+
 export default function HomePage() {
+  const detectionLane = contentLanes[0]
+
   return (
     <main style={shellStyle}>
       <div style={{ maxWidth: '1160px', margin: '0 auto', display: 'grid', gap: '28px' }}>
         <section style={{ ...cardStyle, padding: '32px', display: 'grid', gap: '18px' }}>
           <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.18em', fontSize: '12px', fontWeight: 800 }}>
-            DetLab
+            DetLab-DAC
           </div>
-          <div style={{ display: 'grid', gap: '14px', maxWidth: '860px' }}>
+          <div style={{ display: 'grid', gap: '14px', maxWidth: '900px' }}>
             <h1 style={{ margin: 0, fontSize: 'clamp(2.5rem, 6vw, 4.4rem)', lineHeight: 1.02 }}>
-              Publish security work and push finished artifacts straight to GitHub.
+              Detection engineering documentation, without the extra lanes.
             </h1>
             <p style={{ margin: 0, color: '#cbd5e1', fontSize: '1.1rem', lineHeight: 1.7 }}>
-              DetLab is a static-host friendly security documentation site with a client-side workbench for detections, threat hunts, and investigations.
-              Each lane can move from draft to repo-backed artifact without introducing a dedicated backend just to save content.
+              DetLab-DAC is a static-host friendly detection-engineering site with a GitHub-backed workbench for documenting one detection across multiple rule and query languages.
             </p>
             <p style={{ margin: 0, color: '#94a3b8', fontSize: '1rem', lineHeight: 1.7 }}>
-              Longer term, the strongest patterns here can be turned into a self-hostable template that other practitioners or teams can spin up
-              for their own security knowledge base.
+              The repo is intentionally narrow: detections, supporting detection briefs, and pack-friendly examples. No hunt lane. No IR lane. No lab lane.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -50,7 +52,7 @@ export default function HomePage() {
                 fontWeight: 800,
               }}
             >
-              Browse lanes and workbenches
+              Open detection workbench
             </Link>
             <a
               href="https://github.com/egrexsec/DetLab-DAC"
@@ -80,86 +82,71 @@ export default function HomePage() {
         <section style={{ ...cardStyle, display: 'grid', gap: '18px' }}>
           <div>
             <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>
-              Content architecture
+              Detection packaging
             </div>
-            <h2 style={{ marginBottom: '8px' }}>Four lanes, three save-enabled workbenches, one repo-backed publishing model</h2>
+            <h2 style={{ marginBottom: '8px' }}>One lane, one workbench, multiple implementation dialects</h2>
             <p style={{ color: '#94a3b8', margin: 0, lineHeight: 1.7 }}>
-              Each lane exists to make the site legible to a hiring manager, peer defender, or future template user within a quick scan — and the core operational lanes can now move from draft to GitHub-backed artifact.
+              The site now packages DetLab around a single detection-engineering workflow: document the behavior, preserve telemetry context, compare implementations, and publish the brief to GitHub.
             </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-            {contentLanes.map((lane) => (
-              <Link
-                key={lane.slug}
-                href={`/content/${lane.slug}`}
-                style={{
-                  ...cardStyle,
-                  background: '#111827',
-                  color: '#e2e8f0',
-                  textDecoration: 'none',
-                  display: 'grid',
-                  gap: '10px',
-                }}
-              >
-                <div style={{ color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.78rem', letterSpacing: '0.12em' }}>
-                  {lane.shortTitle}
-                </div>
-                <h3 style={{ margin: 0 }}>{lane.title}</h3>
-                <p style={{ margin: 0, color: '#94a3b8', lineHeight: 1.6 }}>{lane.description}</p>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {lane.highlights.map((item) => (
-                    <span
-                      key={`${lane.slug}-${item}`}
-                      style={{
-                        background: '#0f172a',
-                        border: '1px solid #334155',
-                        borderRadius: '999px',
-                        padding: '6px 10px',
-                        fontSize: '0.78rem',
-                        color: '#cbd5e1',
-                      }}
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </Link>
-            ))}
-          </div>
+          <Link
+            href={`/content/${detectionLane.slug}`}
+            style={{
+              ...cardStyle,
+              background: '#111827',
+              color: '#e2e8f0',
+              textDecoration: 'none',
+              display: 'grid',
+              gap: '10px',
+            }}
+          >
+            <div style={{ color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.78rem', letterSpacing: '0.12em' }}>
+              {detectionLane.shortTitle}
+            </div>
+            <h3 style={{ margin: 0 }}>{detectionLane.title}</h3>
+            <p style={{ margin: 0, color: '#94a3b8', lineHeight: 1.6 }}>{detectionLane.description}</p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {detectionLane.highlights.map((item) => (
+                <span
+                  key={`${detectionLane.slug}-${item}`}
+                  style={{
+                    background: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '999px',
+                    padding: '6px 10px',
+                    fontSize: '0.78rem',
+                    color: '#cbd5e1',
+                  }}
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </Link>
         </section>
 
         <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(280px, 0.75fr)', gap: '16px' }}>
           <article style={cardStyle}>
             <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>
-              Repository direction
+              Supported documentation dialects
             </div>
-            <h2 style={{ marginBottom: '10px' }}>Static hosting, client-side authoring, GitHub-backed persistence</h2>
+            <h2 style={{ marginBottom: '10px' }}>Document once, compare implementations side by side</h2>
             <ul style={{ margin: 0, paddingLeft: '18px', color: '#cbd5e1', lineHeight: 1.8 }}>
-              {roadmap.map((item) => (
+              {supportedDialects.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
           </article>
           <article style={cardStyle}>
             <div style={{ color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '12px', fontWeight: 700 }}>
-              Local run
+              Repository direction
             </div>
-            <h2 style={{ marginBottom: '10px' }}>Simple website workflow</h2>
-            <pre
-              style={{
-                margin: 0,
-                whiteSpace: 'pre-wrap',
-                background: '#020617',
-                border: '1px solid #1e293b',
-                borderRadius: '14px',
-                padding: '16px',
-                color: '#cbd5e1',
-                lineHeight: 1.6,
-                fontSize: '0.92rem',
-              }}
-            >{`cd web
-npm install
-npm run dev`}</pre>
+            <h2 style={{ marginBottom: '10px' }}>Detection-only packaging</h2>
+            <ul style={{ margin: 0, paddingLeft: '18px', color: '#cbd5e1', lineHeight: 1.8 }}>
+              {roadmap.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </article>
         </section>
       </div>

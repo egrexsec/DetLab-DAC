@@ -1,70 +1,57 @@
-# DetLab
+# DetLab-DAC
 
-DetLab is a website-only security documentation project.
+DetLab-DAC is a detection-engineering documentation repo.
 
-The repo is now centered on a single Next.js website that presents:
-- detections
-- threat hunts
-- investigations and DFIR notes
-- learning paths and labs
+It is now intentionally scoped to one job:
+- document detections cleanly
+- preserve the detection story around each rule
+- capture implementations across multiple query and rule languages such as Sigma, SPL, KQL, EQL, and ES|QL
+- keep the output easy to publish, review, and reuse
 
-The goal is clarity first: a visitor should understand the security work, documentation lanes, and intended audience quickly.
+Everything outside that scope has been removed from the product framing.
+No threat-hunt lane, no forensics lane, no DFIR lane, and no learning/lab lane.
 
-Longer term, the best patterns in this repo can be extracted into a self-hostable template that other practitioners or teams can spin up for their own security knowledge base.
+## Assessment
+
+Before this refactor, the repo was **not packaged tightly enough** for a pure detection-engineering use case because:
+- the site and README split attention across detections, threat hunts, investigations, DFIR, labs, and learning paths
+- the workbench supported multiple non-detection lanes instead of one strong detection workflow
+- the default detection authoring path produced a single YAML artifact, but it did not document parallel implementations across SPL, KQL, EQL, Sigma, and related dialects
+- repository structure and copy made the project feel like a generic security knowledge site instead of a focused detection catalog
+
+After this refactor, the repo is packaged around a single detection-engineering publishing model.
 
 ## What the project is now
 
-DetLab is no longer positioned as a hybrid app with a backend workbench.
-It is a website-only repo.
+DetLab-DAC is a static Next.js site plus repo-backed detection content.
 
-That means:
-- the product path is the website
-- CI validates the website, not a backend runtime
-- local development is just the Next.js app
-- the repo narrative is about publishing security work, not operating an internal toolchain
+The repo is organized around three detection-specific layers:
 
-## Website lanes
+1. **Canonical detections**
+   - `detections/`
+   - executable or near-executable rule content
+   - platform-focused examples such as Windows and AWS detections
 
-The site is organized around four lanes:
+2. **Detection documentation**
+   - `knowledge/detection-engineering/`
+   - markdown briefs that explain detection intent, telemetry, ATT&CK mapping, triage guidance, validation notes, and multiple implementation dialects
 
-### 1. Detections
-For publishing detection engineering content with ATT&CK context, telemetry assumptions, and follow-on investigation guidance.
+3. **Curated detection packs**
+   - `examples/packs/`
+   - grouped examples for packaging detections by platform or theme
 
-Repository areas:
-- `detections/`
-- `knowledge/detection-engineering/`
+## Website focus
 
-### 2. Threat Hunts
-For hypothesis-driven hunts, pivots, and downstream detection ideas.
+The website now presents a single lane:
+- **Detection Engineering**
 
-Repository area:
-- `knowledge/threat-hunts/`
-
-### 3. Investigations and DFIR
-For incident response case studies, cloud investigations, forensic summaries, and response lessons learned.
-
-Repository areas:
-- `knowledge/incident-response-case-studies/`
-- `knowledge/flaws-cloud/`
-- `knowledge/flaws2-cloud/`
-
-### 4. Learning Paths and Labs
-For structured learning tracks, lab notes, and portfolio-ready educational content.
-
-Repository areas:
-- `knowledge/learning-paths/`
-- `knowledge/aws-security-learning/`
-- `knowledge/labs/`
-
-## Who it is for
-
-Primary audiences:
-- detection engineers
-- threat hunters
-- SOC analysts
-- DFIR practitioners
-- security engineers
-- practitioners building a public portfolio of serious security work
+That lane is built to document detections across:
+- Sigma
+- Splunk SPL
+- Microsoft Sentinel KQL
+- Elastic EQL
+- Elastic ES|QL
+- other implementation-specific variants when needed
 
 ## Local development
 
@@ -97,21 +84,8 @@ npm run build
 npm run start
 ```
 
-`npm run build` now produces a static export in `web/out/`.
-`npm run start` serves that exported site locally on port `3000` so you can preview the exact static artifact before deploying it to a real web server.
-
-### GitHub Pages deployment
-
-The repo is prepared to deploy from GitHub Actions to GitHub Pages.
-
-Current test URL:
-- `https://egrexsec.github.io/DetLab-DAC/`
-
-Relevant files:
-- `.github/workflows/pages.yml`
-- `web/public/.nojekyll`
-
-The Pages workflow builds with a project-repo base path so the exported site works correctly under `/DetLab-DAC/`.
+`npm run build` produces a static export in `web/out/`.
+`npm run start` serves that exported site locally on port `3000` so you can review the exact deployable artifact.
 
 ### Tests
 
@@ -120,26 +94,51 @@ cd web
 npm test
 ```
 
+## Detection documentation standard
+
+A strong DetLab detection entry should capture:
+- what behavior is being detected
+- why the behavior matters
+- telemetry prerequisites and source assumptions
+- ATT&CK tactic and technique context
+- rule logic in one or more implementation dialects
+- false-positive expectations
+- triage steps
+- validation approach
+- references or linked source material
+
+## Workbench behavior
+
+The website workbench is detection-only.
+It builds a markdown detection brief in the browser and can save it to GitHub with a user-supplied token.
+
+Default save target:
+- `knowledge/detection-engineering/`
+
+The generated artifact is meant for documentation-first detection engineering, not as a replacement for every runnable platform-native rule file under `detections/`.
+
 ## Repository structure
 
 Key paths:
 - `web/` — the Next.js website
-- `detections/` — detection content and examples
-- `knowledge/` — hunts, investigations, learning paths, and labs
-- `docs/images/` — project screenshots and visual assets
+- `detections/` — canonical detection files and examples
+- `knowledge/detection-engineering/` — detection documentation briefs
+- `examples/packs/` — grouped detection packs
+- `docs/` — project and deployment docs
 
 ## Contribution guidance
 
 Good contributions include:
-- improving the website copy, structure, and information architecture
-- adding or refining security content in the existing lanes
-- improving visual presentation and discoverability
-- tightening the repo so it stays website-only and template-friendly
+- adding new detections
+- tightening detection metadata and ATT&CK coverage
+- improving query translations across Sigma, SPL, KQL, EQL, and ES|QL
+- improving triage and validation guidance
+- improving the packaging of detection packs and documentation
 
 When contributing:
-- keep changes aligned to the website-only direction
-- avoid reintroducing backend/runtime coupling as part of the main product path
-- prefer changes that make the repo easier to understand, fork, and extend
+- keep the repo detection-engineering-only
+- avoid reintroducing hunts, investigations, forensics, labs, or general knowledge-base sprawl
+- prefer structures that help a detection engineer compare and publish logic across query languages
 
 ## Security and disclosure
 
@@ -153,19 +152,3 @@ Include:
 - reproduction steps
 - expected impact
 - suggested remediation if known
-
-## Future direction
-
-DetLab has two clear phases:
-
-### Current phase
-A polished website for publishing security documentation across detections, hunts, investigations, and learning.
-
-### Later phase
-A reusable self-hostable template that others can fork and adapt for:
-- personal security portfolios
-- internal team knowledge bases
-- blue-team documentation hubs
-- public detection/hunt/investigation libraries
-
-The current repo should optimize for the first phase without blocking the second.

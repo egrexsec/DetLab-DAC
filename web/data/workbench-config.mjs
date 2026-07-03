@@ -6,46 +6,20 @@ export const laneWorkbenchConfigs = {
   detections: {
     laneSlug: 'detections',
     label: 'Detection workbench',
-    artifactType: 'Detection YAML',
-    fileExtension: '.yml',
-    bodyLabel: 'Detection logic',
-    bodyPlaceholder: `detection:\n  selection:\n    Image|endswith: '\\powershell.exe'\n    CommandLine|contains:\n      - '-enc'\n  condition: selection`,
-    defaultBody: `detection:\n  selection:\n    Image|endswith: '\\powershell.exe'\n    CommandLine|contains:\n      - '-enc'\n  condition: selection`,
-    repositoryDefaults: {
-      owner: DEFAULT_REPO_OWNER,
-      repo: DEFAULT_REPO_NAME,
-      branch: DEFAULT_BRANCH,
-      directory: 'detections/custom',
-    },
-  },
-  'threat-hunts': {
-    laneSlug: 'threat-hunts',
-    label: 'Threat hunt workbench',
-    artifactType: 'Threat hunt markdown',
+    artifactType: 'Detection documentation markdown',
     fileExtension: '.md',
-    bodyLabel: 'Hunt procedure',
-    bodyPlaceholder: `## Hypothesis\nThe activity may indicate...\n\n## Telemetry\n- Endpoint process creation\n- Identity logs\n\n## Hunt steps\n1. Pivot on...\n2. Compare against...\n\n## Detection follow-on\n- Create a detection for...`,
-    defaultBody: `## Hypothesis\nThe activity may indicate...\n\n## Telemetry\n- Endpoint process creation\n- Identity logs\n\n## Hunt steps\n1. Pivot on...\n2. Compare against...\n\n## Detection follow-on\n- Create a detection for...`,
     repositoryDefaults: {
       owner: DEFAULT_REPO_OWNER,
       repo: DEFAULT_REPO_NAME,
       branch: DEFAULT_BRANCH,
-      directory: 'knowledge/threat-hunts',
+      directory: 'knowledge/detection-engineering',
     },
-  },
-  investigations: {
-    laneSlug: 'investigations',
-    label: 'Investigation workbench',
-    artifactType: 'Investigation markdown',
-    fileExtension: '.md',
-    bodyLabel: 'Investigation notes',
-    bodyPlaceholder: `## Executive summary\nDescribe what happened.\n\n## Timeline\n- Time / event\n\n## Evidence\n- Artifact\n\n## Findings\n- Key conclusion\n\n## Response and hardening\n- Action item`,
-    defaultBody: `## Executive summary\nDescribe what happened.\n\n## Timeline\n- Time / event\n\n## Evidence\n- Artifact\n\n## Findings\n- Key conclusion\n\n## Response and hardening\n- Action item`,
-    repositoryDefaults: {
-      owner: DEFAULT_REPO_OWNER,
-      repo: DEFAULT_REPO_NAME,
-      branch: DEFAULT_BRANCH,
-      directory: 'knowledge/incident-response-case-studies',
+    defaults: {
+      sigma: `title: Suspicious Encoded PowerShell\nid: det-encoded-powershell\nstatus: experimental\nlogsource:\n  product: windows\n  service: sysmon\ndetection:\n  selection:\n    Image|endswith: '\\\\powershell.exe'\n    CommandLine|contains:\n      - '-enc'\n  condition: selection`,
+      spl: `index=win* sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational Image="*\\powershell.exe" CommandLine="*-enc*"`,
+      kql: `DeviceProcessEvents\n| where FileName =~ "powershell.exe"\n| where ProcessCommandLine has "-enc"`,
+      eql: `process where host.os.type == "windows" and process.name == "powershell.exe" and process.command_line like "*-enc*"`,
+      esql: `from logs-endpoint.events.process-*\n| where process.name == "powershell.exe"\n| where process.command_line like "%-enc%"`,
     },
   },
 }
@@ -71,16 +45,15 @@ export function normalizeTags(value) {
     .filter(Boolean)
 }
 
-export function buildRepoFilePath(directory, filename) {
-  return `${directory.replace(/\/$/, '')}/${filename.replace(/^\//, '')}`
+export function normalizeLines(value) {
+  return value
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
 
-function formatYamlList(items) {
-  if (!items.length) {
-    return '[]'
-  }
-
-  return `\n${items.map((item) => `  - ${item}`).join('\n')}`
+export function buildRepoFilePath(directory, filename) {
+  return `${directory.replace(/\/$/, '')}/${filename.replace(/^\//, '')}`
 }
 
 function formatFrontmatterList(items) {
@@ -91,11 +64,20 @@ function formatFrontmatterList(items) {
   return `[${items.map((item) => `'${item.replace(/'/g, "''")}'`).join(', ')}]`
 }
 
+function renderBulletSection(title, items, fallback) {
+  const normalizedItems = Array.isArray(items) ? items.filter(Boolean) : []
+
+  if (!normalizedItems.length) {
+    return `## ${title}\n- ${fallback}`
+  }
+
+  return `## ${title}\n${normalizedItems.map((item) => `- ${item}`).join('\n')}`
+}
+
 export function buildLaneArtifact({
   laneSlug,
   title,
   summary,
-  body,
   tags,
   author,
   technique,
@@ -103,8 +85,18 @@ export function buildLaneArtifact({
   severity,
   status,
   platform,
-  hypothesis,
-  scope,
+  telemetry,
+  sigma,
+  spl,
+  kql,
+  eql,
+  esql,
+  otherLanguage,
+  otherQuery,
+  triage,
+  validation,
+  falsePositives,
+  references,
 }) {
   const config = getWorkbenchConfig(laneSlug)
 
@@ -116,38 +108,65 @@ export function buildLaneArtifact({
   const slug = slugify(safeTitle || laneSlug)
   const normalizedTags = normalizeTags(tags || '')
   const effectiveAuthor = author?.trim() || 'mell0wx'
+  const referenceLines = normalizeLines(references || '')
+  const triageLines = normalizeLines(triage || '')
+  const validationLines = normalizeLines(validation || '')
+  const falsePositiveLines = normalizeLines(falsePositives || '')
+  const safeOtherLanguage = otherLanguage?.trim() || 'Other'
 
-  if (laneSlug === 'detections') {
-    return {
-      filename: `${slug || 'new-detection'}${config.fileExtension}`,
-      commitMessage: `Add detection: ${safeTitle || 'new detection'}`,
-      content: `id: ${slug ? `DET-${slug.toUpperCase().replace(/-/g, '_')}` : 'DET-NEW'}\ntitle: ${safeTitle || 'New detection'}\ndescription: ${summary.trim() || 'Describe what the detection finds and why it matters.'}\n\nlogsource:\n  product: ${platform.trim() || 'windows'}\n  service: process_creation\n\nattack:\n  technique: ${technique.trim() || 'TBD'}\n  tactic: ${tactic.trim() || 'execution'}\n\nseverity: ${severity.trim() || 'medium'}\nstatus: ${status.trim() || 'draft'}\nauthor: ${effectiveAuthor}\n\nreferences:${formatYamlList(normalizedTags.map((tag) => `tag:${tag}`))}\n\nfalsepositives:\n  - Add expected benign explanations\n\ntests:\n  - name: Add validation test case\n    source: manual\n    test_id: ${slug || 'new-detection'}\n\n${body.trim() || config.defaultBody}\n`,
-    }
-  }
+  const fence = '```'
+  const codeSection = (title, language, body, fallback) =>
+    `## ${title}\n\n${fence}${language}\n${body.trim() || fallback}\n${fence}`
 
-  const frontmatter = [
+  const sections = [
     '---',
-    `title: ${safeTitle || 'New entry'}`,
-    `summary: ${summary.trim() || 'Add a short summary.'}`,
+    `title: ${safeTitle || 'New detection brief'}`,
+    `detection_id: ${slug ? `DET-${slug.toUpperCase().replace(/-/g, '_')}` : 'DET-NEW'}`,
     `author: ${effectiveAuthor}`,
+    `status: ${status.trim() || 'draft'}`,
+    `severity: ${severity.trim() || 'medium'}`,
+    `platform: ${platform.trim() || 'windows'}`,
     `tags: ${formatFrontmatterList(normalizedTags)}`,
+    `attack_tactic: ${tactic.trim() || 'execution'}`,
+    `attack_technique: ${technique.trim() || 'TBD'}`,
+    '---',
+    '',
+    '## Summary',
+    summary.trim() || 'Describe what the detection finds, why it matters, and where it is expected to fire.',
+    '',
+    '## Telemetry and prerequisites',
+    telemetry.trim() || 'Document the telemetry sources, field requirements, retention assumptions, and parser dependencies needed to run this detection reliably.',
+    '',
+    codeSection('Sigma', 'yaml', sigma, config.defaults.sigma),
+    '',
+    codeSection('Splunk SPL', 'spl', spl, config.defaults.spl),
+    '',
+    codeSection('Microsoft Sentinel KQL', 'kusto', kql, config.defaults.kql),
+    '',
+    codeSection('Elastic EQL', 'eql', eql, config.defaults.eql),
+    '',
+    codeSection('Elastic ES|QL', 'esql', esql, config.defaults.esql),
   ]
 
-  if (laneSlug === 'threat-hunts') {
-    frontmatter.push(`hypothesis: ${hypothesis.trim() || 'Add the hypothesis this hunt is testing.'}`)
-    frontmatter.push('lane: threat-hunt')
+  if ((otherLanguage || '').trim() || (otherQuery || '').trim()) {
+    sections.push('', codeSection(safeOtherLanguage, '', otherQuery, 'Add an additional platform-specific implementation.'))
   }
 
-  if (laneSlug === 'investigations') {
-    frontmatter.push(`scope: ${scope.trim() || 'Add the incident or investigation scope.'}`)
-    frontmatter.push('lane: investigation')
-  }
-
-  frontmatter.push('---')
+  sections.push(
+    '',
+    renderBulletSection('False positives', falsePositiveLines, 'Document expected benign explanations and environmental edge cases.'),
+    '',
+    renderBulletSection('Triage guidance', triageLines, 'Add the first checks an analyst should perform when this detection fires.'),
+    '',
+    renderBulletSection('Validation notes', validationLines, 'Explain how this detection was tested or how it should be validated before production use.'),
+    '',
+    renderBulletSection('References', referenceLines, 'Add ATT&CK, vendor, or research references.'),
+    ''
+  )
 
   return {
-    filename: `${slug || 'new-entry'}${config.fileExtension}`,
-    commitMessage: `Add ${laneSlug === 'threat-hunts' ? 'threat hunt' : 'investigation'}: ${safeTitle || 'new entry'}`,
-    content: `${frontmatter.join('\n')}\n\n${body.trim() || config.defaultBody}\n`,
+    filename: `${slug || 'new-detection-brief'}${config.fileExtension}`,
+    commitMessage: `Add detection brief: ${safeTitle || 'new detection brief'}`,
+    content: sections.join('\n'),
   }
 }
