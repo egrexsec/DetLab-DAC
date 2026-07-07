@@ -1,158 +1,224 @@
 # DetLab-DAC
 
-DetLab-DAC is a detection-engineering documentation repo.
+Documentation-first detection engineering platform for writing, comparing, and publishing a single detection across multiple rule and query languages.
 
-It is now intentionally scoped to one job:
-- document detections cleanly
-- preserve the detection story around each rule
-- capture implementations across multiple query and rule languages such as Sigma, SPL, KQL, EQL, and ES|QL
-- keep the output easy to publish, review, and reuse
+![DetLab homepage](docs/assets/screenshots/detlab-home.png)
 
-Everything outside that scope has been removed from the product framing.
-No threat-hunt lane, no forensics lane, no DFIR lane, and no learning/lab lane.
+## Project summary
 
-## Assessment
+DetLab-DAC packages detection engineering as a **documentation-first workflow**. Instead of starting with one platform query and losing the rest of the context, the project centers a canonical detection brief and maps it to multiple implementations.
 
-Before this refactor, the repo was **not packaged tightly enough** for a pure detection-engineering use case because:
-- the site and README split attention across detections, threat hunts, investigations, DFIR, labs, and learning paths
-- the workbench supported multiple non-detection lanes instead of one strong detection workflow
-- the default detection authoring path produced a single YAML artifact, but it did not document parallel implementations across SPL, KQL, EQL, Sigma, and related dialects
-- repository structure and copy made the project feel like a generic security knowledge site instead of a focused detection catalog
+The repo currently combines:
+- detection content in-repo
+- examples and packs
+- knowledge-base style documentation
+- a static-host-friendly web frontend
+- a GitHub-backed authoring workbench for saving detection briefs into the repository
 
-After this refactor, the repo is packaged around a single detection-engineering publishing model.
+## Who it is for
 
-## What the project is now
+- detection engineers
+- SOC analysts and security engineers
+- security content authors maintaining cross-platform detections
+- teams that want ATT&CK-aware, telemetry-aware detection documentation instead of loose query fragments
 
-DetLab-DAC is a static Next.js site plus repo-backed detection content.
+## Problem it solves
 
-The repo is organized around three detection-specific layers:
+Detection content often becomes fragmented:
+- Sigma in one place
+- Splunk SPL in another
+- KQL or Elastic queries in notebooks or tickets
+- triage notes missing entirely
+- telemetry assumptions lost during handoff
 
-1. **Canonical detections**
-   - `detections/`
-   - executable or near-executable rule content
-   - platform-focused examples such as Windows and AWS detections
+DetLab-DAC keeps those pieces together in one detection brief.
 
-2. **Detection documentation**
-   - `knowledge/detection-engineering/`
-   - markdown briefs that explain detection intent, telemetry, ATT&CK mapping, triage guidance, validation notes, and multiple implementation dialects
+## What this is
 
-3. **Curated detection packs**
-   - `examples/packs/`
-   - grouped examples for packaging detections by platform or theme
+- a documentation-first detection engineering repository
+- a canonical-detection authoring workflow
+- a multi-language comparison surface for the same detection idea
+- a place to store telemetry assumptions, ATT&CK mapping, triage guidance, and validation notes alongside the rule logic
 
-## Website focus
+## What this is not
 
-The website now presents a single lane:
-- **Detection Engineering**
+- not a SIEM product
+- not a generic threat-hunting platform
+- not an IR case management system
+- not a lab automation suite
+- not a guarantee that every detection is production-validated in every environment
 
-That lane is built to document detections across:
-- Sigma
-- Splunk SPL
-- Microsoft Sentinel KQL
-- Elastic EQL
-- Elastic ES|QL
-- other implementation-specific variants when needed
+## Current status
 
-## Local development
+**Active early-stage project.**
 
-### Requirements
-- Node.js
-- npm
+What is confirmed in the repository today:
+- a Next.js web frontend under `web/`
+- a GitHub-backed detection workbench that can render and save markdown artifacts
+- canonical detection artifact generation with frontmatter
+- side-by-side support for Sigma, Splunk SPL, Microsoft Sentinel KQL, Elastic EQL, and Elastic ES|QL
+- repository content areas for detections, examples, knowledge, and reports
+- Node-based tests for web copy/config behavior
 
-### Setup
+## Features
 
-```bash
-git clone https://github.com/egrexsec/DetLab-DAC.git
-cd DetLab-DAC/web
-npm install
+- **Canonical detection brief** with YAML frontmatter and markdown sections
+- **Multi-language implementations** for:
+  - Sigma
+  - Splunk SPL
+  - Microsoft Sentinel KQL
+  - Elastic EQL
+  - Elastic ES|QL
+  - optional additional implementation slot
+- **ATT&CK mapping** fields in the detection schema
+- **Telemetry assumptions** captured as first-class documentation
+- **Triage guidance** and **validation notes** embedded in the artifact format
+- **Pack-friendly publishing** through repo-backed markdown output
+- **GitHub-backed authoring workflow** in the web workbench (implemented in the repo defaults/config)
+
+## Screenshots / demo
+
+### Landing page
+
+![DetLab landing page](docs/assets/screenshots/detlab-home.png)
+
+### Detection workbench
+
+![DetLab detection workbench](docs/assets/screenshots/detlab-workbench.png)
+
+## Architecture
+
+```text
+detections/                  Detection content
+examples/                    Example packs and sample artifacts
+knowledge/                   Supporting documentation / authored briefs
+reports/                     Generated or review-oriented outputs
+scripts/                     Supporting repo scripts
+web/                         Next.js frontend and workbench
+  app/                       Routes and pages
+  components/                UI components
+  data/                      Workbench config and content helpers
+  tests/                     Node-based tests
 ```
 
-### Run locally
+## Tech stack
 
-```bash
-npm run dev
-```
+- Next.js 14
+- React 18
+- TypeScript
+- Node built-in test runner (`node --test`)
+- Markdown/YAML-based detection artifacts
+- GitHub API-backed save flow in the workbench
 
-Then open:
-- `http://127.0.0.1:3000`
+## Quick start
 
-### Production build
+### Web frontend
 
 ```bash
 cd web
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+### Repository-level helpers
+
+```bash
+make help
+```
+
+## Usage
+
+### Example detection workflow
+
+1. define the detection behavior and summary
+2. document telemetry prerequisites and field assumptions
+3. map ATT&CK tactic/technique
+4. add the Sigma version
+5. add or compare the SPL, KQL, EQL, and ES|QL implementations
+6. add false positives, triage guidance, and validation notes
+7. save the artifact into the repo-backed target directory
+8. review it as markdown like any other pull-requested content
+
+## Example folder structure
+
+```text
+knowledge/
+  detection-engineering/
+detections/
+examples/
+  packs/
+web/
+  app/
+  components/
+  data/
+  tests/
+```
+
+## Project structure
+
+The repository separates authored security content from the authoring interface:
+- `detections/` for detection artifacts and related content
+- `knowledge/` for detection-engineering documentation
+- `examples/` for pack-oriented examples
+- `web/` for the user-facing authoring and presentation layer
+
+## Testing
+
+### Web tests
+
+```bash
+cd web
+npm install
+npm test
+npm run build
+```
+
+Current confirmed tests include:
+- `tests/site-content.test.mjs`
+- `tests/site-copy.test.mjs`
+- `tests/workbench-config.test.mjs`
+
+## Deployment
+
+The web app is built as a static-host-friendly Next.js site.
+
+Typical deployment flow:
+
+```bash
+cd web
+npm install
 npm run build
 npm run start
 ```
 
-`npm run build` produces a static export in `web/out/`.
-`npm run start` serves that exported site locally on port `3000` so you can review the exact deployable artifact.
+`npm run start` serves the exported `out/` directory with Python’s simple HTTP server.
 
-### Tests
+## Roadmap
 
-```bash
-cd web
-npm test
-```
+See [ROADMAP.md](ROADMAP.md).
 
-## Detection documentation standard
+### Toward v0.1
+- stabilize the detection document schema
+- tighten the GitHub-backed authoring and save flow
+- expand example detection packs
+- improve README/docs consistency across content areas
 
-A strong DetLab detection entry should capture:
-- what behavior is being detected
-- why the behavior matters
-- telemetry prerequisites and source assumptions
-- ATT&CK tactic and technique context
-- one canonical analytic model plus one or more implementation mappings
-- field-level translation between canonical fields and platform-native fields
-- false-positive expectations
-- triage steps
-- validation approach
-- references or linked source material
+### Toward v1.0
+- broaden canonical detection templates and validation guidance
+- strengthen pack publishing and review workflows
+- add more opinionated contributor guidance for multi-platform detection authoring
+- improve content discovery and comparison UX
 
-Schema reference:
-- `docs/schema/canonical-detection-schema.md`
+## Contributing
 
-## Workbench behavior
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-The website workbench is detection-only.
-It builds a markdown detection brief in the browser and can save it to GitHub with a user-supplied token.
+## Security
 
-Default save target:
-- `knowledge/detection-engineering/`
+See [SECURITY.md](SECURITY.md).
 
-The generated artifact is meant for documentation-first detection engineering, not as a replacement for every runnable platform-native rule file under `detections/`.
+## License
 
-## Repository structure
-
-Key paths:
-- `web/` — the Next.js website
-- `detections/` — canonical detection files and examples
-- `knowledge/detection-engineering/` — detection documentation briefs
-- `examples/packs/` — grouped detection packs
-- `docs/` — project and deployment docs
-
-## Contribution guidance
-
-Good contributions include:
-- adding new detections
-- tightening detection metadata and ATT&CK coverage
-- improving query translations across Sigma, SPL, KQL, EQL, and ES|QL
-- improving triage and validation guidance
-- improving the packaging of detection packs and documentation
-
-When contributing:
-- keep the repo detection-engineering-only
-- avoid reintroducing hunts, investigations, forensics, labs, or general knowledge-base sprawl
-- prefer structures that help a detection engineer compare and publish logic across query languages
-
-## Security and disclosure
-
-Do not report vulnerabilities through public GitHub issues.
-
-Report them privately to:
-- `mell0wx@proton.me`
-
-Include:
-- a short description of the issue
-- reproduction steps
-- expected impact
-- suggested remediation if known
+This repository includes a [LICENSE](LICENSE) file.
