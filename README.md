@@ -15,6 +15,17 @@ The repo currently combines:
 - a static-host-friendly web frontend
 - a GitHub-backed authoring workbench for saving detection briefs into the repository
 
+## Start here
+
+| Need | Go to | Why it matters |
+| --- | --- | --- |
+| Understand the project | this README | Sets the scope: documentation-first detection engineering, not another SIEM |
+| Run the web workbench | `web/` | Author and compare canonical detection briefs |
+| Review detection content | `detections/` and `examples/` | See how detection ideas are packaged for reuse |
+| Study supporting docs | `knowledge/` | Keep telemetry assumptions, ATT&CK mapping, and validation context close to detections |
+| Contribute safely | `CONTRIBUTING.md` and `SECURITY.md` | Preserve public-safe examples and consistent detection-writing standards |
+| Track direction | `ROADMAP.md` | See where schema, validation, and pack publishing are headed |
+
 ## Who it is for
 
 - detection engineers
@@ -193,7 +204,7 @@ npm run build
 npm run start
 ```
 
-`npm run start` serves the exported `out/` directory with Python’s simple HTTP server.
+`npm run start` serves the exported `out/` directory with Python's simple HTTP server.
 
 ## Roadmap
 
