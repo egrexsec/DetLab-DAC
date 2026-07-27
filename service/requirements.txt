@@ -1,2 +1,10 @@
+fastapi==0.116.1
+httpx==0.28.1
 jsonschema==4.26.0
 PyYAML==6.0.3
+pySigma==1.4.0
+pysigma-backend-elasticsearch==2.1.0
+pysigma-backend-kusto==1.0.1
+pysigma-backend-splunk==2.1.0
+pysigma-pipeline-windows==2.0.0
+uvicorn==0.35.0

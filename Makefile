@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: setup dev build start test service-test check
+.PHONY: setup dev build start service-run test service-test check
 
 setup:
 	cd web && npm install
@@ -13,6 +13,9 @@ build:
 
 start:
 	cd web && npm run start
+
+service-run:
+	PYTHONPATH=service uvicorn detlab.api:app --host 127.0.0.1 --port 8000
 
 test:
 	cd web && npm test
