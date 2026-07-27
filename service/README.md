@@ -5,9 +5,10 @@ This optional service executes pySigma conversion outside the static browser app
 ## Security model
 
 - explicit backend registry; request data cannot import Python modules or select arbitrary classes
-- safe pySigma/YAML parsing path
+- safe YAML parsing with maximum depth 20, maximum 20 aliases, and a 10,000-node post-load structure limit
 - 256 KiB source limit
-- five-second response timeout by default
+- five-second response timeout by default, enforced in a disposable worker process that is terminated on timeout
+- conversion results are fully serialized in the worker before publication, so partial generated output is never returned
 - narrow CORS allowlist from `DETLAB_CORS_ORIGINS`
 - versioned converter provenance and canonical-source SHA-256 in each response
 - no credentials accepted in the browser's API-origin field

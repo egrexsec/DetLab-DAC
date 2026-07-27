@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import multiprocessing
 import os
+import queue
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -12,6 +15,62 @@ from pydantic import BaseModel
 from .converter import ConversionError, ConverterService
 
 MAX_SOURCE_BYTES = 262_144
+
+
+class ConversionWorkerError(RuntimeError):
+    """Raised when an isolated conversion worker cannot return a complete result."""
+
+
+def _conversion_worker(result_queue: Any, service: Any, source: str, target: str) -> None:
+    try:
+        # Serialize before publishing so callers can never observe partial output.
+        payload = json.dumps(service.convert(source, target), separators=(",", ":"))
+        result_queue.put(("ok", payload))
+    except ConversionError as exc:
+        result_queue.put(("conversion_error", str(exc)))
+    except Exception:
+        result_queue.put(("worker_error", "Conversion worker failed"))
+
+
+def _convert_isolated(service: Any, source: str, target: str, timeout: float) -> dict[str, Any]:
+    context = multiprocessing.get_context("spawn")
+    result_queue = context.Queue(maxsize=1)
+    process = context.Process(
+        target=_conversion_worker,
+        args=(result_queue, service, source, target),
+        daemon=True,
+    )
+    process.start()
+    try:
+        process.join(timeout)
+        if process.is_alive():
+            process.terminate()
+            process.join(0.5)
+            if process.is_alive():
+                process.kill()
+                process.join()
+            raise TimeoutError("conversion timed out")
+        try:
+            status, payload = result_queue.get(timeout=0.5)
+        except queue.Empty as exc:
+            raise ConversionWorkerError("Conversion worker returned no result") from exc
+    finally:
+        if process.is_alive():
+            process.terminate()
+            process.join()
+        result_queue.close()
+        result_queue.join_thread()
+    if status == "conversion_error":
+        raise ConversionError(payload)
+    if status != "ok":
+        raise ConversionWorkerError(payload)
+    try:
+        result = json.loads(payload)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ConversionWorkerError("Conversion worker returned an invalid result") from exc
+    if not isinstance(result, dict):
+        raise ConversionWorkerError("Conversion worker returned an invalid result")
+    return result
 
 
 class ConvertRequest(BaseModel):
@@ -55,14 +114,19 @@ def create_app(
         if request.target not in known_targets:
             raise _error(422, "unsupported_backend", "Requested conversion backend is not registered")
         try:
-            return await asyncio.wait_for(
-                asyncio.to_thread(service.convert, request.source, request.target),
-                timeout=conversion_timeout_seconds,
+            return await asyncio.to_thread(
+                _convert_isolated,
+                service,
+                request.source,
+                request.target,
+                conversion_timeout_seconds,
             )
         except TimeoutError as exc:
             raise _error(504, "conversion_timeout", "Conversion exceeded the configured timeout") from exc
         except ConversionError as exc:
             raise _error(422, "invalid_sigma", str(exc)) from exc
+        except ConversionWorkerError as exc:
+            raise _error(500, "conversion_failed", "Conversion worker failed safely") from exc
 
     return app
 

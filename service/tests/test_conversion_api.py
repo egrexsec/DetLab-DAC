@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import time
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from fastapi.testclient import TestClient
 
@@ -39,6 +41,21 @@ class SlowConverter:
     def convert(self, source: str, target: str):
         time.sleep(0.05)
         return {}
+
+
+class DelayedSideEffectConverter(SlowConverter):
+    def __init__(self, marker: str) -> None:
+        self.marker = marker
+
+    def convert(self, source: str, target: str):
+        time.sleep(0.1)
+        Path(self.marker).write_text("worker survived timeout", encoding="utf-8")
+        return {}
+
+
+class IncompleteResultConverter(SlowConverter):
+    def convert(self, source: str, target: str):
+        return {"outputs": ["complete", object()]}
 
 
 class ConversionApiTests(unittest.TestCase):
@@ -88,6 +105,55 @@ class ConversionApiTests(unittest.TestCase):
         response = client.post("/v1/convert", json={"source": VALID_SIGMA, "target": "splunk"})
         self.assertEqual(response.status_code, 504)
         self.assertEqual(response.json()["detail"]["code"], "conversion_timeout")
+
+    def test_conversion_timeout_terminates_worker_before_side_effect(self) -> None:
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "late-write"
+            client = TestClient(
+                create_app(
+                    converter=DelayedSideEffectConverter(str(marker)),
+                    conversion_timeout_seconds=0.01,
+                )
+            )
+            response = client.post("/v1/convert", json={"source": VALID_SIGMA, "target": "splunk"})
+            time.sleep(0.15)
+
+            self.assertEqual(response.status_code, 504)
+            self.assertFalse(marker.exists(), "timed-out worker continued running")
+
+    def test_yaml_alias_limit_is_enforced_before_conversion(self) -> None:
+        aliases = "\n".join(f"  alias_{index}: *shared" for index in range(21))
+        source = f"title: aliases\nshared: &shared value\nitems:\n{aliases}\n"
+        response = self.client.post("/v1/convert", json={"source": source, "target": "splunk"})
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["detail"]["code"], "invalid_sigma")
+        self.assertIn("alias", response.json()["detail"]["message"].lower())
+
+    def test_yaml_depth_limit_is_enforced_before_conversion(self) -> None:
+        source = "value"
+        for _ in range(21):
+            source = f"- {source}"
+        response = self.client.post("/v1/convert", json={"source": source, "target": "splunk"})
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["detail"]["code"], "invalid_sigma")
+        self.assertIn("depth", response.json()["detail"]["message"].lower())
+
+    def test_post_load_structure_limit_is_enforced(self) -> None:
+        source = "items:\n" + "".join(f"  - {index}\n" for index in range(10001))
+        response = self.client.post("/v1/convert", json={"source": source, "target": "splunk"})
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["detail"]["code"], "invalid_sigma")
+        self.assertIn("structure", response.json()["detail"]["message"].lower())
+
+    def test_generation_is_published_only_after_complete_serialization(self) -> None:
+        client = TestClient(create_app(converter=IncompleteResultConverter()))
+        response = client.post("/v1/convert", json={"source": VALID_SIGMA, "target": "splunk"})
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["detail"]["code"], "conversion_failed")
 
 
 class ConverterServiceTests(unittest.TestCase):
