@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   buildLaneArtifact,
   buildRepoFilePath,
@@ -135,6 +135,10 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
   const [conversionState, setConversionState] = useState<'idle' | 'converting' | 'converted' | 'stale' | 'error'>('idle')
   const [conversionMessage, setConversionMessage] = useState('')
   const [conversionResult, setConversionResult] = useState<ConversionResult>(null)
+  const latestSigmaRef = useRef(formState.sigma)
+  const requestGenerationRef = useRef(0)
+
+  latestSigmaRef.current = formState.sigma
 
   const config = useMemo(() => getWorkbenchConfig(laneSlug), [laneSlug])
 
@@ -291,14 +295,24 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
       setConversionMessage('Add authored Sigma YAML before converting.')
       return
     }
+    const submittedSource = formState.sigma
+    const requestGeneration = ++requestGenerationRef.current
     setConversionState('converting')
     setConversionMessage('Converting authored Sigma with the selected pinned backend…')
     try {
       const result = await requestSigmaConversion({
         baseUrl: conversionApiUrl,
-        source: formState.sigma,
+        source: submittedSource,
         target: conversionTarget,
       })
+      if (
+        latestSigmaRef.current !== submittedSource
+        || requestGenerationRef.current !== requestGeneration
+      ) {
+        setConversionState('stale')
+        setConversionMessage('Sigma changed while converting; the conversion response is stale and was not published.')
+        return
+      }
       const field = conversionFieldForTarget(result.target)
       if (!field) {
         throw new Error('Conversion response target is not supported by this workbench.')
@@ -416,10 +430,12 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
           <textarea
             value={formState.sigma}
             onChange={(event) => {
+              latestSigmaRef.current = event.target.value
+              requestGenerationRef.current += 1
               setFormState((current) => ({ ...current, sigma: event.target.value }))
-              if (conversionResult) {
+              if (conversionResult || conversionState === 'converting') {
                 setConversionState('stale')
-                setConversionMessage('Authored Sigma changed after conversion; generated outputs are stale.')
+                setConversionMessage('Authored Sigma changed; generated or in-flight conversion output is stale.')
               }
             }}
             rows={10}

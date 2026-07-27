@@ -58,6 +58,11 @@ class IncompleteResultConverter(SlowConverter):
         return {"outputs": ["complete", object()]}
 
 
+class LargeResultConverter(SlowConverter):
+    def convert(self, source: str, target: str):
+        return {"target": target, "outputs": ["A" * 255_206]}
+
+
 class ConversionApiTests(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(create_app(conversion_timeout_seconds=2.0))
@@ -154,6 +159,14 @@ class ConversionApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 500)
         self.assertEqual(response.json()["detail"]["code"], "conversion_failed")
+
+    def test_large_complete_result_is_received_before_worker_join(self) -> None:
+        client = TestClient(create_app(converter=LargeResultConverter(), conversion_timeout_seconds=2.0))
+
+        response = client.post("/v1/convert", json={"source": VALID_SIGMA, "target": "splunk"})
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(len(response.json()["outputs"][0]), 255_206)
 
 
 class ConverterServiceTests(unittest.TestCase):

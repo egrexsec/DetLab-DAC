@@ -6,6 +6,7 @@ import json
 import multiprocessing
 import os
 import queue
+import time
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -41,23 +42,25 @@ def _convert_isolated(service: Any, source: str, target: str, timeout: float) ->
         daemon=True,
     )
     process.start()
+    deadline = time.monotonic() + timeout
     try:
-        process.join(timeout)
+        try:
+            status, payload = result_queue.get(timeout=max(0.0, deadline - time.monotonic()))
+        except queue.Empty as exc:
+            if process.is_alive():
+                raise TimeoutError("conversion timed out") from exc
+            raise ConversionWorkerError("Conversion worker returned no result") from exc
+
+        process.join(max(0.0, deadline - time.monotonic()))
+        if process.is_alive():
+            raise TimeoutError("conversion timed out")
+    finally:
         if process.is_alive():
             process.terminate()
             process.join(0.5)
             if process.is_alive():
                 process.kill()
                 process.join()
-            raise TimeoutError("conversion timed out")
-        try:
-            status, payload = result_queue.get(timeout=0.5)
-        except queue.Empty as exc:
-            raise ConversionWorkerError("Conversion worker returned no result") from exc
-    finally:
-        if process.is_alive():
-            process.terminate()
-            process.join()
         result_queue.close()
         result_queue.join_thread()
     if status == "conversion_error":

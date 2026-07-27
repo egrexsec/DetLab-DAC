@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { readFile } from 'node:fs/promises'
 import assert from 'node:assert/strict'
 
 import {
@@ -6,6 +7,16 @@ import {
   normalizeConversionApiBaseUrl,
   requestSigmaConversion,
 } from '../data/conversion-client.mjs'
+
+const workbenchSource = await readFile(new URL('../components/lane-workbench.tsx', import.meta.url), 'utf8')
+
+test('workbench rejects a conversion response when Sigma changes in flight', () => {
+  assert.match(workbenchSource, /useRef/)
+  assert.match(workbenchSource, /submittedSource/)
+  assert.match(workbenchSource, /latestSigmaRef\.current\s*!==\s*submittedSource/)
+  assert.match(workbenchSource, /requestGeneration/)
+  assert.match(workbenchSource, /conversion response is stale/i)
+})
 
 test('conversion API base URL accepts absolute HTTP(S) without credentials', () => {
   assert.equal(normalizeConversionApiBaseUrl('https://convert.example.test/'), 'https://convert.example.test')
