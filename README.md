@@ -69,7 +69,9 @@ What is confirmed in the repository today:
 - canonical detection artifact generation with frontmatter
 - side-by-side support for Sigma, Splunk SPL, Microsoft Sentinel KQL, Elastic EQL, and Elastic ES|QL
 - repository content areas for detections, examples, knowledge, and reports
+- a shared [DetLab Detection Content Specification v1](docs/schema/detection-content-spec-v1.md) adapter with source hashing and generated-artifact provenance
 - Node-based tests for web copy/config behavior
+- Python contract tests covering every authored detection YAML file
 
 ## Features
 

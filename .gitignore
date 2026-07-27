@@ -2,5 +2,7 @@ web/node_modules/
 web/.next/
 web/.vercel/
 web/out/
+__pycache__/
+*.py[cod]
 .env
 .hermes/
