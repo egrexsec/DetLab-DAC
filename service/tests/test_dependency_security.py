@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import unittest
 
 
-def test_service_operates_with_diskcache_imports_blocked() -> None:
-    script = """
+class DependencySecurityTests(unittest.TestCase):
+    def test_service_operates_with_diskcache_imports_blocked(self) -> None:
+        script = """
 import sys
 sys.modules['diskcache'] = None
 sys.modules['diskcache.core'] = None
@@ -25,10 +27,14 @@ detection:
 ''', 'splunk')
 assert result['outputs']
 """
-    completed = subprocess.run(
-        [sys.executable, "-c", script],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    assert completed.returncode == 0, completed.stderr
+        completed = subprocess.run(
+            [sys.executable, "-c", script],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

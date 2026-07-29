@@ -30,6 +30,9 @@ jobs:
       - name: Validate shared detection contract
         run: PYTHONPATH=service python -m unittest discover -s service/tests -p 'test_*.py' -v
 
+      - name: Audit Python dependencies
+        run: service/audit-dependencies.sh
+
       - name: Static security analysis
         run: bandit -q -r service/detlab
 
