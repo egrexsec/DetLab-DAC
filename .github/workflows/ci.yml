@@ -25,10 +25,16 @@ jobs:
           python-version: "3.13"
 
       - name: Install contract dependencies
-        run: python -m pip install -r service/requirements.txt
+        run: python -m pip install -r service/requirements-dev.txt
 
       - name: Validate shared detection contract
         run: PYTHONPATH=service python -m unittest discover -s service/tests -p 'test_*.py' -v
+
+      - name: Audit Python dependencies
+        run: service/audit-dependencies.sh
+
+      - name: Static security analysis
+        run: bandit -q -r service/detlab
 
   website:
     runs-on: ubuntu-latest

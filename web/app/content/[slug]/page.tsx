@@ -7,8 +7,9 @@ export function generateStaticParams() {
   return contentLanes.map((lane) => ({ slug: lane.slug }))
 }
 
-export default function ContentLanePage({ params }: { params: { slug: string } }) {
-  const lane = getLaneBySlug(params.slug)
+export default async function ContentLanePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const lane = getLaneBySlug(slug)
 
   if (!lane) {
     notFound()

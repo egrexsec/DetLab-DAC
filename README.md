@@ -70,6 +70,8 @@ What is confirmed in the repository today:
 - side-by-side support for Sigma, Splunk SPL, Microsoft Sentinel KQL, Elastic EQL, and Elastic ES|QL
 - repository content areas for detections, examples, knowledge, and reports
 - a shared [DetLab Detection Content Specification v1](docs/schema/detection-content-spec-v1.md) adapter with source hashing and generated-artifact provenance
+- an optional server-side pySigma conversion API with an explicit backend registry, input limits, timeouts, and structured errors
+- workbench conversion controls with loading, error, provenance, and stale-output states
 - Node-based tests for web copy/config behavior
 - Python contract tests covering every authored detection YAML file
 
@@ -107,6 +109,7 @@ examples/                    Example packs and sample artifacts
 knowledge/                   Supporting documentation / authored briefs
 reports/                     Generated or review-oriented outputs
 scripts/                     Supporting repo scripts
+service/                     Optional FastAPI + pySigma conversion service
 web/                         Next.js frontend and workbench
   app/                       Routes and pages
   components/                UI components
@@ -122,6 +125,7 @@ web/                         Next.js frontend and workbench
 - Node built-in test runner (`node --test`)
 - Markdown/YAML-based detection artifacts
 - GitHub API-backed save flow in the workbench
+- FastAPI and pinned pySigma backends for optional server-side conversion
 
 ## Quick start
 
@@ -134,6 +138,17 @@ npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+### Optional conversion service
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r service/requirements.txt
+PYTHONPATH=service uvicorn detlab.api:app --host 127.0.0.1 --port 8000
+```
+
+Enter `http://localhost:8000` in the workbench conversion panel. See [`service/README.md`](service/README.md) before exposing the API beyond localhost/LAN.
 
 ### Repository-level helpers
 

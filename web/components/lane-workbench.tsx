@@ -1,12 +1,17 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   buildLaneArtifact,
   buildRepoFilePath,
   getWorkbenchConfig,
 } from '../data/workbench-config.mjs'
+import {
+  conversionFieldForTarget,
+  requestSigmaConversion,
+} from '../data/conversion-client.mjs'
+import { runConversionRequest } from '../data/conversion-request.mjs'
 
 type LaneSlug = 'detections'
 
@@ -15,6 +20,12 @@ type SaveResult = {
   fileUrl: string
   path: string
   sha: string
+} | null
+
+type ConversionResult = {
+  sourceSha256: string
+  converter: string
+  target: string
 } | null
 
 type FormState = {
@@ -120,12 +131,22 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [statusMessage, setStatusMessage] = useState('')
   const [saveResult, setSaveResult] = useState<SaveResult>(null)
+  const [conversionApiUrl, setConversionApiUrl] = useState(process.env.NEXT_PUBLIC_DETLAB_CONVERSION_API ?? '')
+  const [conversionTarget, setConversionTarget] = useState('splunk')
+  const [conversionState, setConversionState] = useState<'idle' | 'converting' | 'converted' | 'stale' | 'error'>('idle')
+  const [conversionMessage, setConversionMessage] = useState('')
+  const [conversionResult, setConversionResult] = useState<ConversionResult>(null)
+  const latestSigmaRef = useRef(formState.sigma)
+  const requestGenerationRef = useRef(0)
+
+  latestSigmaRef.current = formState.sigma
 
   const config = useMemo(() => getWorkbenchConfig(laneSlug), [laneSlug])
 
   useEffect(() => {
     const savedToken = window.localStorage.getItem('detlab:github-token')
     const savedState = window.localStorage.getItem('detlab:detection-workbench')
+    const savedConversionApi = window.localStorage.getItem('detlab:conversion-api')
 
     if (savedToken) {
       setToken(savedToken)
@@ -136,6 +157,10 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
     } else {
       setFormState(getDefaultFormState())
     }
+
+    if (savedConversionApi) {
+      setConversionApiUrl(savedConversionApi)
+    }
   }, [])
 
   useEffect(() => {
@@ -145,6 +170,10 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
   useEffect(() => {
     window.localStorage.setItem('detlab:detection-workbench', JSON.stringify(formState))
   }, [formState])
+
+  useEffect(() => {
+    window.localStorage.setItem('detlab:conversion-api', conversionApiUrl)
+  }, [conversionApiUrl])
 
   const artifact = useMemo(
     () =>
@@ -256,6 +285,53 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
     }
   }
 
+  async function handleConvert() {
+    if (!conversionApiUrl.trim()) {
+      setConversionState('error')
+      setConversionMessage('Configure the server-side conversion API URL before converting.')
+      return
+    }
+    if (!formState.sigma.trim()) {
+      setConversionState('error')
+      setConversionMessage('Add authored Sigma YAML before converting.')
+      return
+    }
+    const submittedSource = formState.sigma
+    const requestGeneration = ++requestGenerationRef.current
+    setConversionState('converting')
+    setConversionMessage('Converting authored Sigma with the selected pinned backend…')
+    await runConversionRequest({
+      source: submittedSource,
+      generation: requestGeneration,
+      request: () => requestSigmaConversion({
+        baseUrl: conversionApiUrl,
+        source: submittedSource,
+        target: conversionTarget,
+      }),
+      isCurrent: (generation: number, source: string) => (
+        requestGenerationRef.current === generation && latestSigmaRef.current === source
+      ),
+      publishSuccess: (result: any) => {
+        const field = conversionFieldForTarget(result.target)
+        if (!field) {
+          throw new Error('Conversion response target is not supported by this workbench.')
+        }
+        setFormState((current) => ({ ...current, [field]: result.outputs.join('\n\n') }))
+        setConversionState('converted')
+        setConversionResult({
+          sourceSha256: result.source_sha256,
+          converter: `${result.provenance.converter.name}@${result.provenance.converter.version}`,
+          target: result.target,
+        })
+        setConversionMessage(`Generated ${result.target} from the current Sigma source.`)
+      },
+      publishError: (error: unknown) => {
+        setConversionState('error')
+        setConversionMessage(error instanceof Error ? error.message : 'Unknown conversion failure.')
+      },
+    })
+  }
+
   return (
     <section style={{ ...panelStyle, display: 'grid', gap: '18px' }}>
       <div style={{ display: 'grid', gap: '8px' }}>
@@ -354,11 +430,69 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
         <LabeledField label="Sigma">
           <textarea
             value={formState.sigma}
-            onChange={(event) => setFormState((current) => ({ ...current, sigma: event.target.value }))}
+            onChange={(event) => {
+              latestSigmaRef.current = event.target.value
+              requestGenerationRef.current += 1
+              setFormState((current) => ({ ...current, sigma: event.target.value }))
+              if (conversionResult || conversionState === 'converting') {
+                setConversionState('stale')
+                setConversionMessage('Authored Sigma changed; generated or in-flight conversion output is stale.')
+              }
+            }}
             rows={10}
             style={{ ...inputStyle, resize: 'vertical' as const, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
           />
         </LabeledField>
+        <div style={{ ...panelStyle, display: 'grid', gap: '12px' }}>
+          <strong>Server-side Sigma conversion</strong>
+          <p style={{ margin: 0, color: '#94a3b8', lineHeight: 1.6 }}>
+            Authored Sigma stays canonical. Generated queries include backend version and source-hash provenance.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(180px, 0.4fr)', gap: '12px' }}>
+            <LabeledField label="Conversion API origin">
+              <input
+                value={conversionApiUrl}
+                onChange={(event) => setConversionApiUrl(event.target.value)}
+                placeholder="http://localhost:8000"
+                style={inputStyle}
+              />
+            </LabeledField>
+            <LabeledField label="Target backend">
+              <select value={conversionTarget} onChange={(event) => setConversionTarget(event.target.value)} style={inputStyle}>
+                <option value="splunk">Splunk SPL</option>
+                <option value="elastic-eql">Elastic EQL</option>
+                <option value="elastic-esql">Elastic ES|QL</option>
+                <option value="microsoft-kusto">Microsoft Kusto KQL</option>
+              </select>
+            </LabeledField>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handleConvert}
+              disabled={conversionState === 'converting'}
+              style={{
+                background: '#1d4ed8',
+                color: '#dbeafe',
+                border: '1px solid #60a5fa',
+                borderRadius: '999px',
+                padding: '10px 16px',
+                cursor: conversionState === 'converting' ? 'progress' : 'pointer',
+                fontWeight: 800,
+              }}
+            >
+              {conversionState === 'converting' ? 'Converting…' : 'Generate selected query'}
+            </button>
+            <span style={{ color: conversionState === 'error' || conversionState === 'stale' ? '#fca5a5' : '#94a3b8' }}>
+              {conversionMessage || 'No generated output in this browser session.'}
+            </span>
+          </div>
+          {conversionResult ? (
+            <code style={{ color: conversionState === 'stale' ? '#fca5a5' : '#86efac', overflowWrap: 'anywhere' }}>
+              {conversionState === 'stale' ? 'STALE · ' : ''}{conversionResult.target} · {conversionResult.converter} · source {conversionResult.sourceSha256}
+            </code>
+          ) : null}
+        </div>
         <LabeledField label="Splunk SPL">
           <textarea
             value={formState.spl}
