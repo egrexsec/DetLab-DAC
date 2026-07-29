@@ -11,6 +11,7 @@ import {
   conversionFieldForTarget,
   requestSigmaConversion,
 } from '../data/conversion-client.mjs'
+import { runConversionRequest } from '../data/conversion-request.mjs'
 
 type LaneSlug = 'detections'
 
@@ -299,36 +300,36 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
     const requestGeneration = ++requestGenerationRef.current
     setConversionState('converting')
     setConversionMessage('Converting authored Sigma with the selected pinned backend…')
-    try {
-      const result = await requestSigmaConversion({
+    await runConversionRequest({
+      source: submittedSource,
+      generation: requestGeneration,
+      request: () => requestSigmaConversion({
         baseUrl: conversionApiUrl,
         source: submittedSource,
         target: conversionTarget,
-      })
-      if (
-        latestSigmaRef.current !== submittedSource
-        || requestGenerationRef.current !== requestGeneration
-      ) {
-        setConversionState('stale')
-        setConversionMessage('Sigma changed while converting; the conversion response is stale and was not published.')
-        return
-      }
-      const field = conversionFieldForTarget(result.target)
-      if (!field) {
-        throw new Error('Conversion response target is not supported by this workbench.')
-      }
-      setFormState((current) => ({ ...current, [field]: result.outputs.join('\n\n') }))
-      setConversionState('converted')
-      setConversionResult({
-        sourceSha256: result.source_sha256,
-        converter: `${result.provenance.converter.name}@${result.provenance.converter.version}`,
-        target: result.target,
-      })
-      setConversionMessage(`Generated ${result.target} from the current Sigma source.`)
-    } catch (error) {
-      setConversionState('error')
-      setConversionMessage(error instanceof Error ? error.message : 'Unknown conversion failure.')
-    }
+      }),
+      isCurrent: (generation: number, source: string) => (
+        requestGenerationRef.current === generation && latestSigmaRef.current === source
+      ),
+      publishSuccess: (result: any) => {
+        const field = conversionFieldForTarget(result.target)
+        if (!field) {
+          throw new Error('Conversion response target is not supported by this workbench.')
+        }
+        setFormState((current) => ({ ...current, [field]: result.outputs.join('\n\n') }))
+        setConversionState('converted')
+        setConversionResult({
+          sourceSha256: result.source_sha256,
+          converter: `${result.provenance.converter.name}@${result.provenance.converter.version}`,
+          target: result.target,
+        })
+        setConversionMessage(`Generated ${result.target} from the current Sigma source.`)
+      },
+      publishError: (error: unknown) => {
+        setConversionState('error')
+        setConversionMessage(error instanceof Error ? error.message : 'Unknown conversion failure.')
+      },
+    })
   }
 
   return (

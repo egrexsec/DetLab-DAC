@@ -1,5 +1,4 @@
 import test from 'node:test'
-import { readFile } from 'node:fs/promises'
 import assert from 'node:assert/strict'
 
 import {
@@ -7,15 +6,74 @@ import {
   normalizeConversionApiBaseUrl,
   requestSigmaConversion,
 } from '../data/conversion-client.mjs'
+import { runConversionRequest } from '../data/conversion-request.mjs'
 
-const workbenchSource = await readFile(new URL('../components/lane-workbench.tsx', import.meta.url), 'utf8')
+function deferred() {
+  let resolve
+  let reject
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
 
-test('workbench rejects a conversion response when Sigma changes in flight', () => {
-  assert.match(workbenchSource, /useRef/)
-  assert.match(workbenchSource, /submittedSource/)
-  assert.match(workbenchSource, /latestSigmaRef\.current\s*!==\s*submittedSource/)
-  assert.match(workbenchSource, /requestGeneration/)
-  assert.match(workbenchSource, /conversion response is stale/i)
+function conversionHarness() {
+  let generation = 0
+  let state = { status: 'idle', result: null, message: '' }
+
+  return {
+    start(source, request) {
+      const requestGeneration = ++generation
+      state = { status: 'converting', result: null, message: `converting ${source}` }
+      return runConversionRequest({
+        source,
+        generation: requestGeneration,
+        request,
+        isCurrent: (candidateGeneration) => candidateGeneration === generation,
+        publishSuccess: (result) => {
+          state = { status: 'converted', result, message: `converted ${source}` }
+        },
+        publishError: (error) => {
+          state = { status: 'error', result: null, message: error.message }
+        },
+      })
+    },
+    snapshot() {
+      return state
+    },
+  }
+}
+
+test('old success after a new request starts cannot mutate shared conversion state', async () => {
+  const oldResponse = deferred()
+  const newResponse = deferred()
+  const harness = conversionHarness()
+  const oldRequest = harness.start('old sigma', () => oldResponse.promise)
+  harness.start('new sigma', () => newResponse.promise)
+  const stateAfterNewStart = harness.snapshot()
+
+  oldResponse.resolve({ target: 'splunk', outputs: ['old output'] })
+  await oldRequest
+
+  assert.deepEqual(harness.snapshot(), stateAfterNewStart)
+  newResponse.resolve({ target: 'splunk', outputs: ['new output'] })
+})
+
+test('old error after a newer request succeeds cannot mutate shared conversion state', async () => {
+  const oldResponse = deferred()
+  const newResponse = deferred()
+  const harness = conversionHarness()
+  const oldRequest = harness.start('old sigma', () => oldResponse.promise)
+  const newRequest = harness.start('new sigma', () => newResponse.promise)
+
+  newResponse.resolve({ target: 'splunk', outputs: ['new output'] })
+  await newRequest
+  const stateAfterNewSuccess = harness.snapshot()
+  oldResponse.reject(new Error('old request failed'))
+  await oldRequest
+
+  assert.deepEqual(harness.snapshot(), stateAfterNewSuccess)
 })
 
 test('conversion API base URL accepts absolute HTTP(S) without credentials', () => {
