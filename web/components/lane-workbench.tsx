@@ -12,6 +12,11 @@ import {
   requestSigmaConversion,
 } from '../data/conversion-client.mjs'
 import { runConversionRequest } from '../data/conversion-request.mjs'
+import {
+  forgetGeneratedQuerySource,
+  recordGeneratedQuerySource,
+  staleGeneratedQueryFields,
+} from '../data/conversion-provenance.mjs'
 
 type LaneSlug = 'detections'
 
@@ -27,6 +32,9 @@ type ConversionResult = {
   converter: string
   target: string
 } | null
+
+type GeneratedQueryField = 'spl' | 'kql' | 'eql' | 'esql'
+type GeneratedQuerySources = Partial<Record<GeneratedQueryField, string>>
 
 type FormState = {
   repoOwner: string
@@ -49,6 +57,7 @@ type FormState = {
   kql: string
   eql: string
   esql: string
+  generatedQuerySources: GeneratedQuerySources
   otherLanguage: string
   otherQuery: string
   triage: string
@@ -115,6 +124,7 @@ function getDefaultFormState(): FormState {
     kql: config.defaults.kql,
     eql: config.defaults.eql,
     esql: config.defaults.esql,
+    generatedQuerySources: {},
     otherLanguage: '',
     otherQuery: '',
     triage: '',
@@ -206,8 +216,27 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
 
   const effectiveFilename = formState.filename.trim() || artifact.filename
   const targetPath = buildRepoFilePath(formState.directory, effectiveFilename)
+  const staleGeneratedFields = staleGeneratedQueryFields(
+    formState.generatedQuerySources,
+    formState.sigma,
+    formState,
+  ) as GeneratedQueryField[]
+  const hasStaleGeneratedOutputs = staleGeneratedFields.length > 0
+
+  function handleGeneratedQueryChange(field: GeneratedQueryField, value: string) {
+    setFormState((current) => ({
+      ...current,
+      [field]: value,
+      generatedQuerySources: forgetGeneratedQuerySource(current.generatedQuerySources, field),
+    }))
+  }
 
   async function handleSave() {
+    if (hasStaleGeneratedOutputs) {
+      setSaveState('error')
+      setStatusMessage(`Regenerate or manually revise stale generated queries before saving: ${staleGeneratedFields.join(', ')}.`)
+      return
+    }
     if (!token.trim()) {
       setSaveState('error')
       setStatusMessage('Add a GitHub personal access token with repo contents write access before saving.')
@@ -316,7 +345,11 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
         if (!field) {
           throw new Error('Conversion response target is not supported by this workbench.')
         }
-        setFormState((current) => ({ ...current, [field]: result.outputs.join('\n\n') }))
+        setFormState((current) => ({
+          ...current,
+          [field]: result.outputs.join('\n\n'),
+          generatedQuerySources: recordGeneratedQuerySource(current.generatedQuerySources, field, submittedSource),
+        }))
         setConversionState('converted')
         setConversionResult({
           sourceSha256: result.source_sha256,
@@ -434,7 +467,7 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
               latestSigmaRef.current = event.target.value
               requestGenerationRef.current += 1
               setFormState((current) => ({ ...current, sigma: event.target.value }))
-              if (conversionResult || conversionState === 'converting') {
+              if (Object.keys(formState.generatedQuerySources).length > 0 || conversionState === 'converting') {
                 setConversionState('stale')
                 setConversionMessage('Authored Sigma changed; generated or in-flight conversion output is stale.')
               }
@@ -492,11 +525,16 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
               {conversionState === 'stale' ? 'STALE · ' : ''}{conversionResult.target} · {conversionResult.converter} · source {conversionResult.sourceSha256}
             </code>
           ) : null}
+          {hasStaleGeneratedOutputs ? (
+            <code style={{ color: '#fca5a5', overflowWrap: 'anywhere' }}>
+              STALE generated queries: {staleGeneratedFields.join(', ')} · GitHub save blocked until regenerated or manually revised.
+            </code>
+          ) : null}
         </div>
         <LabeledField label="Splunk SPL">
           <textarea
             value={formState.spl}
-            onChange={(event) => setFormState((current) => ({ ...current, spl: event.target.value }))}
+            onChange={(event) => handleGeneratedQueryChange('spl', event.target.value)}
             rows={6}
             style={{ ...inputStyle, resize: 'vertical' as const, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
           />
@@ -504,7 +542,7 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
         <LabeledField label="Microsoft Sentinel KQL">
           <textarea
             value={formState.kql}
-            onChange={(event) => setFormState((current) => ({ ...current, kql: event.target.value }))}
+            onChange={(event) => handleGeneratedQueryChange('kql', event.target.value)}
             rows={6}
             style={{ ...inputStyle, resize: 'vertical' as const, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
           />
@@ -512,7 +550,7 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
         <LabeledField label="Elastic EQL">
           <textarea
             value={formState.eql}
-            onChange={(event) => setFormState((current) => ({ ...current, eql: event.target.value }))}
+            onChange={(event) => handleGeneratedQueryChange('eql', event.target.value)}
             rows={6}
             style={{ ...inputStyle, resize: 'vertical' as const, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
           />
@@ -520,7 +558,7 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
         <LabeledField label="Elastic ES|QL">
           <textarea
             value={formState.esql}
-            onChange={(event) => setFormState((current) => ({ ...current, esql: event.target.value }))}
+            onChange={(event) => handleGeneratedQueryChange('esql', event.target.value)}
             rows={6}
             style={{ ...inputStyle, resize: 'vertical' as const, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
           />
@@ -586,14 +624,15 @@ export default function LaneWorkbench({ initialLaneSlug }: { initialLaneSlug: La
         <button
           type="button"
           onClick={handleSave}
-          disabled={saveState === 'saving'}
+          disabled={saveState === 'saving' || hasStaleGeneratedOutputs}
           style={{
             background: '#0f766e',
             color: '#ccfbf1',
             border: '1px solid #14b8a6',
             borderRadius: '999px',
             padding: '12px 18px',
-            cursor: saveState === 'saving' ? 'progress' : 'pointer',
+            cursor: saveState === 'saving' ? 'progress' : hasStaleGeneratedOutputs ? 'not-allowed' : 'pointer',
+            opacity: hasStaleGeneratedOutputs ? 0.65 : 1,
             fontWeight: 800,
           }}
         >

@@ -7,6 +7,11 @@ import {
   requestSigmaConversion,
 } from '../data/conversion-client.mjs'
 import { runConversionRequest } from '../data/conversion-request.mjs'
+import {
+  forgetGeneratedQuerySource,
+  recordGeneratedQuerySource,
+  staleGeneratedQueryFields,
+} from '../data/conversion-provenance.mjs'
 
 function deferred() {
   let resolve
@@ -134,4 +139,35 @@ test('conversion client surfaces structured API errors', async () => {
     requestSigmaConversion({ baseUrl: 'http://localhost:8000', source: 'bad', target: 'splunk', fetchImpl: fakeFetch }),
     /Sigma source is invalid/,
   )
+})
+
+test('regenerating one target cannot make other generated targets current', () => {
+  let sources = {}
+  sources = recordGeneratedQuerySource(sources, 'spl', 'old sigma')
+  sources = recordGeneratedQuerySource(sources, 'kql', 'old sigma')
+
+  sources = recordGeneratedQuerySource(sources, 'spl', 'new sigma')
+
+  assert.deepEqual(
+    staleGeneratedQueryFields(sources, 'new sigma', { spl: 'new spl', kql: 'old kql' }),
+    ['kql'],
+  )
+})
+
+test('failed retry leaves every generated output from the edited source stale', () => {
+  let sources = {}
+  sources = recordGeneratedQuerySource(sources, 'spl', 'old sigma')
+  sources = recordGeneratedQuerySource(sources, 'kql', 'old sigma')
+
+  assert.deepEqual(
+    staleGeneratedQueryFields(sources, 'new sigma', { spl: 'old spl', kql: 'old kql' }),
+    ['kql', 'spl'],
+  )
+})
+
+test('manual query edits remove generated provenance for that field', () => {
+  let sources = recordGeneratedQuerySource({}, 'spl', 'old sigma')
+  sources = forgetGeneratedQuerySource(sources, 'spl')
+
+  assert.deepEqual(staleGeneratedQueryFields(sources, 'new sigma', { spl: 'manual spl' }), [])
 })
